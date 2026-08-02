@@ -1,0 +1,11 @@
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\bin\Debug\net8.0\Otus.ToDoList.ConsoleBot.deps.json
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\bin\Debug\net8.0\Otus.ToDoList.ConsoleBot.dll
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\bin\Debug\net8.0\Otus.ToDoList.ConsoleBot.pdb
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\Otus.ToDoList.ConsoleBot.GeneratedMSBuildEditorConfig.editorconfig
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\Otus.ToDoList.ConsoleBot.AssemblyInfoInputs.cache
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\Otus.ToDoList.ConsoleBot.AssemblyInfo.cs
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\Otus.ToDoList.ConsoleBot.csproj.CoreCompileInputs.cache
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\Otus.ToDoList.ConsoleBot.dll
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\refint\Otus.ToDoList.ConsoleBot.dll
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\Otus.ToDoList.ConsoleBot.pdb
+D:\Учебный Бот\Кулинарный Бот\CookingBot\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\obj\Debug\net8.0\ref\Otus.ToDoList.ConsoleBot.dll
