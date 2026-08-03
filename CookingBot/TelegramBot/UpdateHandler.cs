@@ -155,7 +155,7 @@ namespace CookingBot.TelegramBot
 
         private async Task GreetingAsync(ITelegramBotClient telegramBotClient, Update update, CancellationToken ct)
         {
-            StringBuilder str = new StringBuilder("\n");
+            var str = new StringBuilder("\n");
             str.AppendLine(" Приветствую Вас в проекте \"Кулинарный бот\"\n");
             str.AppendLine(" Бот поддерживает следующие команды при старте:");
             str.AppendLine(" \"/start\" - используется для начала работы");
@@ -234,7 +234,7 @@ namespace CookingBot.TelegramBot
         {
             string telegramUserName = string.IsNullOrWhiteSpace(text) ? update.Message.From.Username! : text;
 
-            ToDoUser newUser = await _userService.RegisterUserAsync(update.Message.From.Id, telegramUserName); ;
+            ToDoUser newUser = await _userService.RegisterUserAsync(_userId, telegramUserName);
 
             await telegramBotClient.SendMessage(update.Message.Chat, " Зарегистрирован новый Пользователь", ct);
             await telegramBotClient.SendMessage(update.Message.Chat, $" UserId: {newUser.UserId}", ct);
@@ -284,7 +284,7 @@ namespace CookingBot.TelegramBot
         {
             var user = await _userService.GetUserAsync(_userId);
 
-            StringBuilder str = new StringBuilder("\n"); ;
+            var str = new StringBuilder("\n"); ;
             str.AppendLine(" Вам доступны следующие команды:");
             if (user == null)
             {
@@ -329,7 +329,7 @@ namespace CookingBot.TelegramBot
                     var user = await _userService.GetUserAsync(_userId);
                     ToDoItem newToDoItem = await _todoService.AddAsync(user!, newTask);
 
-                    StringBuilder str = new StringBuilder();
+                    var str = new StringBuilder();
                     str.AppendLine($" Задача добавлена:\n");
                     str.AppendLine($" Id: {newToDoItem.Id}\n");
                     str.AppendLine($" User:\tUserId: {newToDoItem.User.UserId}\n");
@@ -383,7 +383,7 @@ namespace CookingBot.TelegramBot
         private async Task ShowAllTasksAsync(ITelegramBotClient telegramBotClient, Update update, CancellationToken ct)
         {
             var user = await _userService.GetUserAsync(_userId);
-            var listAllTasks = (await _todoService.GetAllByUserIdAsync(user!.UserId)).ToList();
+            var listAllTasks = await _todoService.GetAllByUserIdAsync(user!.UserId);
 
             if (listAllTasks.Count() > 0)
             {
@@ -405,7 +405,7 @@ namespace CookingBot.TelegramBot
         private async Task CompleteTaskAsync(string inputStr, ITelegramBotClient telegramBotClient, Update update, CancellationToken ct)
         {
             var user = await _userService.GetUserAsync(_userId);
-            var listTasks = (await _todoService.GetActiveByUserIdAsync(user!.UserId)).ToList();
+            var listTasks = await _todoService.GetActiveByUserIdAsync(user!.UserId);
 
             if (listTasks.Count() > 0)
             {
@@ -448,7 +448,7 @@ namespace CookingBot.TelegramBot
         private async Task RemoveTaskAsync(string inputStr, ITelegramBotClient telegramBotClient, Update update, CancellationToken ct)
         {
             var user = await _userService.GetUserAsync(_userId);
-            var listAllTasks = (await _todoService.GetAllByUserIdAsync(user!.UserId)).ToList();
+            var listAllTasks = await _todoService.GetAllByUserIdAsync(user!.UserId);
 
             if (listAllTasks.Count() > 0)
             {
@@ -508,7 +508,7 @@ namespace CookingBot.TelegramBot
             if (!string.IsNullOrWhiteSpace(namePrefix))
             {
                 var user = await _userService.GetUserAsync(_userId);
-                var listTasks = (await _todoService.FindAsync(user!, namePrefix)).ToList();
+                var listTasks = await _todoService.FindAsync(user!, namePrefix);
 
                 if (listTasks.Count() > 0)
                 {

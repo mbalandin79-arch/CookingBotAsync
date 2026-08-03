@@ -95,7 +95,6 @@ namespace CookingBot.Core.Services
 
             if (!int.TryParse(str, out answ) || answ < min || answ > max)
                 throw new ArgumentException($"{str} это значение не соответствует требованиям");
-
             return answ;
         }
 
