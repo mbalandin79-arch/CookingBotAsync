@@ -9,10 +9,19 @@ namespace CookingBot.Core.DataAccess
 {
     public interface IUserRepository
     {
-        Task<ToDoUser?> GetUserAsync(Guid userId);
+        // Возвращает всю информацию о пользователе по userId
+        Task<ToDoUser?> GetUserByUserIdAsync(Guid userId, CancellationToken ct);
 
-        Task<ToDoUser?> GetUserByTelegramUserIdAsync(long telegramUserId);
+        // Возвращает всю информацию о пользователе по telegramUserId
+        Task<ToDoUser?> GetUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct);
 
-        Task AddAsync(ToDoUser user);
+        // Добавляет пользователя
+        Task AddAsync(ToDoUser user, CancellationToken ct);
+
+        // Удаляет пользователя по userId
+        Task DeleteAsync(Guid userId, CancellationToken ct);
+
+        // Изменяет существующего пользователя
+        Task UpdateAsync(ToDoUser user, CancellationToken ct);
     }
 }

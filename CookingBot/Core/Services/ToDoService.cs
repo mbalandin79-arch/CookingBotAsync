@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using CookingBot.Core.DataAccess;
 using CookingBot.Core.Entities;
@@ -21,9 +23,10 @@ namespace CookingBot.Core.Services
             _toDoRepository = toDoRepository;
         }
 
-        private async Task CheckCounthLimitAsync(Guid userId)
+        private async Task CheckCountLimitAsync(Guid userId, CancellationToken ct)
         {
-            if (await _toDoRepository.CountActiveAsync(userId) >= _maxTasks)
+            var checkCount = await _toDoRepository.CountActiveAsync(userId, ct);
+            if (checkCount >= _maxTasks)
                 throw new TaskCountLimitException(_maxTasks);
         }
 
@@ -35,78 +38,102 @@ namespace CookingBot.Core.Services
             }
         }
 
-        private async Task CheckDuplicateAsync(Guid userId, string name)
+        private async Task CheckDuplicateAsync(Guid userId, string name, CancellationToken ct)
         {
-            if (await _toDoRepository.ExistsByNameAsync(userId, name))
+            var checkExist = await _toDoRepository.ExistsByNameAsync(userId, name, ct);
+            if (checkExist)
             {
                 throw new DuplicateTaskException(name);
             }
         }
 
-        public async Task<ToDoItem> AddAsync(ToDoUser user, string name)
+        public async Task<ToDoItem> AddAsync(ToDoUser user, string name, CancellationToken ct)
         {
-            await CheckCounthLimitAsync(user.UserId);
-            if (name.Length > 0)
-            {
-                CheckLengthLimits(name);
-                await CheckDuplicateAsync(user.UserId, name);
-            }
+            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Имя задачи не может быть пустым.", nameof(name));
+
+            name = name.Trim();
+
+            await CheckCountLimitAsync(user.UserId, ct);
+            CheckLengthLimits(name);
+            await CheckDuplicateAsync(user.UserId, name, ct);
 
             var item = new ToDoItem(user, name);
-            await _toDoRepository.AddAsync(item);
+            await _toDoRepository.AddAsync(item, ct);
             return item;
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task DeleteAsync(Guid id, CancellationToken ct)
         {
-            await _toDoRepository.DeleteAsync(id);
-        }
+            ct.ThrowIfCancellationRequested();
+            if (id == default(Guid))
+                return;
 
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId)
-        {
-            return await _toDoRepository.GetActiveByUserIdAsync(userId);
-        }
-
-        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId)
-        {
-            return await _toDoRepository.GetAllByUserIdAsync(userId);
-        }
-
-        public async Task MarkCompletedAsync(Guid id)
-        {
-            if (id != default(Guid))
+            var item = await _toDoRepository.GetAsync(id, ct);
+            if (item != null)
             {
-                ToDoItem updateItem = await _toDoRepository.GetAsync(id);
-                updateItem.State = ToDoItem.ToDoItemState.Completed;
-                updateItem.StateChangedAt = DateTime.UtcNow; // универсальная дата и время на данный момент для всех часовых поясов
-                await _toDoRepository.UpdateAsync(updateItem);
+                await _toDoRepository.DeleteAsync(id, ct);
             }
         }
 
-        public void ValidateString(string str)
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(str))
-                throw new ArgumentException($"{str} это значение не соответствует требованиям");
+            return await _toDoRepository.GetActiveByUserIdAsync(userId, ct);
         }
 
-        public int ParseAndValidateInt(string str, int min, int max)
+        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct)
         {
-            int answ = 0;
-
-            if (!int.TryParse(str, out answ) || answ < min || answ > max)
-                throw new ArgumentException($"{str} это значение не соответствует требованиям");
-            return answ;
+            return await _toDoRepository.GetAllByUserIdAsync(userId, ct);
         }
 
-        public async Task SetConfigurationAsync(int maxTasks, int maxLengthTask)
+        public async Task MarkCompletedAsync(Guid id, CancellationToken ct)
         {
+            ct.ThrowIfCancellationRequested();
+            if (id == default(Guid))
+                return;
+
+            var item = await _toDoRepository.GetAsync(id, ct);
+            if (item != null)
+            {
+                item.State = ToDoItem.ToDoItemState.Completed;
+                item.StateChangedAt = DateTime.UtcNow; // универсальная дата и время на данный момент для всех часовых поясов
+                await _toDoRepository.UpdateAsync(item, ct);
+            }
+        }
+
+        public async Task SetConfigurationAsync(int maxTasks, int maxLengthTask, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
             _maxTasks = maxTasks;
             _maxLengthTask = maxLengthTask;
+            await Task.CompletedTask;
         }
 
-        public async Task<IReadOnlyList<ToDoItem>> FindAsync(ToDoUser user, string namePrefix)
+        public async Task<IReadOnlyList<ToDoItem>> FindAsync(ToDoUser user, string namePrefix, CancellationToken ct)
         {
-            return await _toDoRepository.FindAsync(user.UserId, x => x.Name.ToLower().StartsWith(namePrefix.ToLower()));
+            ct.ThrowIfCancellationRequested();
+            var prefix = namePrefix.ToLower();
+            return await _toDoRepository.FindAsync(user.UserId, x => x.Name.ToLower().StartsWith(prefix), ct);
+        }
+
+        public async Task ChangeContentAsync(Guid id, string text, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (id == default(Guid))
+                return;
+
+            var item = await _toDoRepository.GetAsync(id, ct);
+            if (item != null)
+            {
+                item.Content = text;
+                await _toDoRepository.UpdateAsync(item, ct);
+            }
+        }
+
+        public async Task<ToDoItem?> GetTaskAsync(Guid id, CancellationToken ct)
+        {
+            return await _toDoRepository.GetAsync(id, ct);
         }
     }
 }

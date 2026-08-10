@@ -10,7 +10,7 @@ namespace CookingBot.Core.Exceptions
     {
         public int TaskCountLimit { get; }
 
-        public TaskCountLimitException(int taskCountLimit) : base()
+        public TaskCountLimitException(int taskCountLimit) : base($"Превышено максимальное количество задач: {taskCountLimit}.")
         {
             TaskCountLimit = taskCountLimit;
         }

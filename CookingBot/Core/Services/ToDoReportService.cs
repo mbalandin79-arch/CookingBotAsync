@@ -11,28 +11,24 @@ namespace CookingBot.Core.Services
 {
     internal class ToDoReportService : IToDoReportService
     {
-        private readonly IToDoRepository _toDoRepository;
         private readonly IToDoService _todoService;
 
-        public ToDoReportService(IToDoRepository toDoRepository, IToDoService todoService)
+        public ToDoReportService(IToDoService todoService)
         {
-            _toDoRepository = toDoRepository;
             _todoService = todoService;
         }
 
-        public async Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStatsAsync(Guid userId)
+        public async Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStatsAsync(Guid userId, CancellationToken ct)
         {
-            int _total;
-            int _completed;
-            int _active;
-            DateTime _generateAt = DateTime.Now;
+            ct.ThrowIfCancellationRequested();
+            DateTime _generateAt = DateTime.UtcNow;
 
-            var allByUser = await _todoService.GetAllByUserIdAsync(userId);
-            var activeByUser = await _todoService.GetActiveByUserIdAsync(userId);
+            var allByUser = await _todoService.GetAllByUserIdAsync(userId, ct);
+            var activeByUser = await _todoService.GetActiveByUserIdAsync(userId, ct);
 
-            _total = allByUser.Count() > 0 ? allByUser.Count() : 0;
-            _active = activeByUser.Count() > 0 ? activeByUser.Count() : 0;
-            _completed = _total > 0 ? _total - _active : 0;
+            int _total = allByUser.Count;
+            int _active = activeByUser.Count;
+            int _completed = _total - _active;
 
             return (total: _total, completed: _completed, active: _active, generatedAt: _generateAt);
         }

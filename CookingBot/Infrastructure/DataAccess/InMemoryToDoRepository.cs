@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using CookingBot.Core.DataAccess;
 using CookingBot.Core.Entities;
@@ -12,71 +13,141 @@ namespace CookingBot.Infrastructure.DataAccess
 {
     internal class InMemoryToDoRepository : IToDoRepository
     {
-        private List<ToDoItem> _toDoItems = new List<ToDoItem>();
+        private List<ToDoItem> _itemsInMemory = new List<ToDoItem>();
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-        public async Task AddAsync(ToDoItem item)
+        public async Task AddAsync(ToDoItem item, CancellationToken ct)
         {
-            _toDoItems.Add(item);
-        }
-
-        public async Task<int> CountActiveAsync(Guid userId)
-        {            
-            return _toDoItems.Where(w => w.User.UserId == userId && w.State == ToDoItem.ToDoItemState.Active).Count();
-        }
-
-        public async Task DeleteAsync(Guid id)
-        {
-            _toDoItems.Remove(_toDoItems.First(f => f.Id == id));
-        }
-
-        public async Task<bool> ExistsByNameAsync(Guid userId, string name)
-        {
-            foreach (var curr in _toDoItems)
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
             {
-                if (curr.User.UserId == userId && curr.Name == name)
-                    return true;
+                _itemsInMemory.Add(item);
             }
-            return false;
-        }
-
-        public async Task<ToDoItem?> GetAsync(Guid id)
-        {
-            return _toDoItems.FirstOrDefault(curr => curr.Id == id);
-        }
-
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId)
-        {
-            List<ToDoItem> listTemp = new List<ToDoItem>();
-
-            foreach (var curr in _toDoItems)
+            finally
             {
-                if (curr.User.UserId == userId && curr.State == ToDoItem.ToDoItemState.Active)
-                    listTemp.Add(curr);
+                _semaphore.Release();
             }
-            return listTemp;
         }
 
-        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId)
+        public async Task<int> CountActiveAsync(Guid userId, CancellationToken ct)
         {
-            List<ToDoItem> listTemp = new List<ToDoItem>();
-
-            foreach (var curr in _toDoItems)
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
             {
-                if (curr.User.UserId == userId)
-                    listTemp.Add(curr);
+                return _itemsInMemory.Count(w => w.User.UserId == userId && w.State == ToDoItem.ToDoItemState.Active);
             }
-            return listTemp;
-        }        
-
-        public async Task UpdateAsync(ToDoItem item)
-        {
-            var index = _toDoItems.IndexOf(_toDoItems.FirstOrDefault(f => f.Id == item.Id));
-            _toDoItems[index] = item;
+            finally
+            {
+                _semaphore.Release();
+            }
         }
 
-        public async Task<IReadOnlyList<ToDoItem>> FindAsync(Guid userId, Func<ToDoItem, bool> predicate)
+        public async Task DeleteAsync(Guid id, CancellationToken ct)
         {
-            return _toDoItems.Where(f => predicate(f) && f.User.UserId == userId).ToList();
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                var item = _itemsInMemory.FirstOrDefault(w => w.Id == id);
+                if (item != null)
+                {
+                    _itemsInMemory.Remove(item);
+                }
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public async Task<bool> ExistsByNameAsync(Guid userId, string name, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                return _itemsInMemory.Any(curr => curr.User.UserId == userId && string.Equals(curr.Name, name, StringComparison.OrdinalIgnoreCase));
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public async Task<ToDoItem?> GetAsync(Guid id, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                return _itemsInMemory.FirstOrDefault(curr => curr.Id == id);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                return _itemsInMemory.Where(w => w.User.UserId == userId && w.State == ToDoItem.ToDoItemState.Active).ToList();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                return _itemsInMemory.Where(w => w.User.UserId == userId).ToList();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public async Task UpdateAsync(ToDoItem item, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                var index = _itemsInMemory.FindIndex(f => f.Id == item.Id);
+                if (index >= 0)
+                {
+                    _itemsInMemory[index] = item;
+                }
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
+        public async Task<IReadOnlyList<ToDoItem>> FindAsync(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                return _itemsInMemory.Where(f => predicate(f) && f.User.UserId == userId).ToList();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }            
         }
     }
 }

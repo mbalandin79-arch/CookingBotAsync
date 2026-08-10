@@ -11,7 +11,7 @@ namespace CookingBot.Core.Exceptions
         public int TaskLength { get; }
         public int TaskLengthLimit { get; }
 
-        public TaskLengthLimitException(int taskLength, int taskLengthLimit) : base()
+        public TaskLengthLimitException(int taskLength, int taskLengthLimit) : base($"Длина задачи ({taskLength}) превышает максимально допустимое значение {taskLengthLimit}.")
         {
             TaskLength = taskLength;
             TaskLengthLimit = taskLengthLimit;

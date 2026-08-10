@@ -10,7 +10,7 @@ namespace CookingBot.Core.Exceptions
     {
         public string Task { get; }
 
-        public DuplicateTaskException(string task) : base()
+        public DuplicateTaskException(string task) : base($"Задача '{task}' уже существует.")
         {
             Task = task;
         }
