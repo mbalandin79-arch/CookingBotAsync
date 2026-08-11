@@ -16,7 +16,7 @@ namespace CookingBot
             {
                 using var cts = new CancellationTokenSource();
                 FileUserRepository userRepository = new FileUserRepository();
-                FileToDoRepository toDoRepository = new FileToDoRepository();
+                FileToDoRepository toDoRepository = new FileToDoRepository("Todos");
                 //InMemoryUserRepository userRepository = new InMemoryUserRepository();
                 //InMemoryToDoRepository toDoRepository = new InMemoryToDoRepository();                
                 ToDoService toDoService = new ToDoService(toDoRepository);

@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Otus.ToDoList.ConsoleBot.Types;
+using static CookingBot.Core.Entities.ToDoUser;
 
 namespace CookingBot.Core.Entities
 {

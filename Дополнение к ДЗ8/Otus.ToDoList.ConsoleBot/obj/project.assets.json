@@ -14,11 +14,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\Учебный Бот\\Кулинарный Бот\\CookingBot\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\Otus.ToDoList.ConsoleBot.csproj",
+      "projectUniqueName": "D:\\Учебный Бот\\Кулинарный Бот\\CookingBotAsync\\CookingBotAsync\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\Otus.ToDoList.ConsoleBot.csproj",
       "projectName": "Otus.ToDoList.ConsoleBot",
-      "projectPath": "D:\\Учебный Бот\\Кулинарный Бот\\CookingBot\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\Otus.ToDoList.ConsoleBot.csproj",
+      "projectPath": "D:\\Учебный Бот\\Кулинарный Бот\\CookingBotAsync\\CookingBotAsync\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\Otus.ToDoList.ConsoleBot.csproj",
       "packagesPath": "C:\\Users\\mbala\\.nuget\\packages\\",
-      "outputPath": "D:\\Учебный Бот\\Кулинарный Бот\\CookingBot\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\obj\\",
+      "outputPath": "D:\\Учебный Бот\\Кулинарный Бот\\CookingBotAsync\\CookingBotAsync\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "D:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

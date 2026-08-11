@@ -5,54 +5,38 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-
 using CookingBot.Core.DataAccess;
 using CookingBot.Core.Entities;
-
 using Otus.ToDoList.ConsoleBot.Types;
 
 namespace CookingBot.Infrastructure.DataAccess
 {
     internal class FileUserRepository : IUserRepository
     {
+        private readonly string _folderPath;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-
-        private async Task<ToDoUser?> SearchUserInFileAsync(long telegramUserId, CancellationToken ct)
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
         {
-            var allUsers = new List<ToDoUser>();
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var jsonfiles = Directory.GetFiles("*.json");
+            PropertyNameCaseInsensitive = true,
+            WriteIndented = true
+        };
 
-            foreach (var jsonfile in jsonfiles)
+        public FileUserRepository(string folderPath = "UserData")
+        {
+            _folderPath = folderPath;
+            if (!Directory.Exists(_folderPath))
             {
-                var json = await File.ReadAllTextAsync(jsonfile);
-                var user = JsonSerializer.Deserialize<ToDoUser>(json, options);
-                if (user != null) 
-                { 
-                    allUsers.Add(user); 
-                }
+                Directory.CreateDirectory(_folderPath);
             }
-
-            return allUsers.FirstOrDefault(w => w.TelegramUserId == telegramUserId);
         }
 
-        private async Task<ToDoUser?> ReadFromFileUserAsync(string filePath, CancellationToken ct)
-        {
-            if (!File.Exists(filePath))
-            {
-                return null;
-            }
+        private string GetFilePath(Guid userId) => Path.Combine(_folderPath, $"{userId}.json");
 
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = await File.ReadAllTextAsync(filePath);
-            return JsonSerializer.Deserialize<ToDoUser>(json, options) ?? null;
-        }
-
-        private async Task WriteToFileUserAsync(ToDoUser user, string filePath, CancellationToken ct)
+        private async Task WriteToFileUserAsync(ToDoUser user, CancellationToken ct)
         {
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(user, options);
-            await File.WriteAllTextAsync(filePath, json);
+            var filePath = GetFilePath(user.UserId);
+            var json = JsonSerializer.Serialize(user, _jsonOptions);
+            await File.WriteAllTextAsync(filePath, json, ct);
         }
 
         public async Task AddAsync(ToDoUser user, CancellationToken ct)
@@ -61,8 +45,7 @@ namespace CookingBot.Infrastructure.DataAccess
             await _semaphore.WaitAsync(ct);
             try
             {
-                string filePath = user.UserId.ToString() + ".json";
-                await WriteToFileUserAsync(user, filePath, ct);
+                await WriteToFileUserAsync(user, ct);
             }
             finally
             {
@@ -76,8 +59,11 @@ namespace CookingBot.Infrastructure.DataAccess
             await _semaphore.WaitAsync(ct);
             try
             {
-                string filePath = userId.ToString() + ".json";
-                File.Delete(filePath);
+                string filePath = GetFilePath(userId);
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
             }
             finally
             {
@@ -90,8 +76,17 @@ namespace CookingBot.Infrastructure.DataAccess
             ct.ThrowIfCancellationRequested();
             await _semaphore.WaitAsync(ct);
             try
-            {                
-                return await SearchUserInFileAsync(telegramUserId, ct);
+            {
+                foreach (var file in Directory.GetFiles(_folderPath, "*.json"))
+                {
+                    var json = await File.ReadAllTextAsync(file, ct);
+                    var user = JsonSerializer.Deserialize<ToDoUser>(json, _jsonOptions);
+                    if (user != null && user.TelegramUserId == telegramUserId)
+                    {
+                        return user;
+                    }
+                }
+                return null;
             }
             finally
             {
@@ -105,8 +100,13 @@ namespace CookingBot.Infrastructure.DataAccess
             await _semaphore.WaitAsync(ct);
             try
             {
-                string filePath = userId.ToString() + ".json";
-                return await ReadFromFileUserAsync(filePath, ct);
+                var filePath = GetFilePath(userId);
+                if (!File.Exists(filePath))
+                {
+                    return null;
+                }
+                var json = await File.ReadAllTextAsync(filePath, ct);
+                return JsonSerializer.Deserialize<ToDoUser>(json, _jsonOptions);
             }
             finally
             {
@@ -120,12 +120,7 @@ namespace CookingBot.Infrastructure.DataAccess
             await _semaphore.WaitAsync(ct);
             try
             {
-                string filePath = user.UserId.ToString() + ".json";
-                var exists = File.Exists(filePath);
-                if (exists) 
-                {
-                    await WriteToFileUserAsync(user, filePath, ct);
-                }                
+                await WriteToFileUserAsync(user, ct);
             }
             finally
             {
