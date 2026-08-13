@@ -1,9 +1,0 @@
-{
-  "solution": {
-    "path": "CookingBot\\CookingBot.sln",
-    "projects": [
-      "..\\Дополнение к ДЗ8\\Otus.ToDoList.ConsoleBot\\Otus.ToDoList.ConsoleBot.csproj",
-      "CookingBot.csproj"
-    ]
-  }
-}

@@ -9,8 +9,8 @@ namespace CookingBot.Core.Entities
 {
     public class ToDoUser
     {
-        public enum ToDoUserState
-        {
+        public enum ToDoUserState 
+        { 
             Guest,
             Member,
             Advanced,
@@ -33,8 +33,8 @@ namespace CookingBot.Core.Entities
         }
 
         [JsonConstructor]
-        public ToDoUser(Guid userId, long telegramUserId, string telegramUserName, DateTime registeredAt, ToDoUserState state)
-        {
+        public ToDoUser(Guid userId, long telegramUserId, string telegramUserName, DateTime registeredAt, ToDoUserState state) 
+        { 
             UserId = userId;
             TelegramUserId = telegramUserId;
             TelegramUserName = telegramUserName;

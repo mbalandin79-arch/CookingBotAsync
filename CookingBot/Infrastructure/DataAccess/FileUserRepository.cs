@@ -31,7 +31,7 @@ namespace CookingBot.Infrastructure.DataAccess
         }
 
         private string GetFilePath(Guid userId) => Path.Combine(_folderPath, $"{userId}.json");
-
+        
         private async Task WriteToFileUserAsync(ToDoUser user, CancellationToken ct)
         {
             var filePath = GetFilePath(user.UserId);

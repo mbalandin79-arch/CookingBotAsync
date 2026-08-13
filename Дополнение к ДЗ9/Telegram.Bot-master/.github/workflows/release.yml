@@ -1,0 +1,85 @@
+name: Release build
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release notes'
+        required: true
+      version:
+        description: "Release version (leave empty for automatic versioning)"
+
+run-name: '📌 Release build ${{ inputs.version }}'
+
+env:
+  PROJECT_PATH: src/Telegram.Bot/Telegram.Bot.csproj
+  UNITTEST_PATH: test/Telegram.Bot.Tests.Unit/Telegram.Bot.Tests.Unit.csproj
+  CONFIGURATION: Release
+  PACKAGES_PATH: src/Telegram.Bot/bin/Release
+  RELEASE_NOTES: ${{ inputs.release_notes }}
+  VERSION: ${{ inputs.version }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # For git tag
+      id-token: write  # enable GitHub OIDC token issuance for this job
+    steps:
+    - uses: actions/checkout@v5
+      with:
+        fetch-depth: 100
+    - name: Determine version
+      if: ${{ env.VERSION == '' }}
+      run: |
+        git fetch --depth=100 --tags
+        DESCR_TAG=$(git describe --tags --long)   # get the last tag-commits_since-sha
+        DESCR_TAG=${DESCR_TAG#v}                  # remove the eventual 'v' prefix
+        LAST_TAG=${DESCR_TAG%%-*}                 # extract the last tag
+        if [[ $LAST_TAG =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then LAST_TAG=$LAST_TAG.0; fi   # turn 1.2.3 into 1.2.3.0
+        NEXT_VERSION=${LAST_TAG%.*}.$((${LAST_TAG##*.} + 1))    # increment the last number
+        RELEASE_VERSION=${{vars.RELEASE_VERSION}}   # construct the version if we were to respect the RELEASE_VERSION variable
+        VERSION=`echo -e "$RELEASE_VERSION\n$NEXT_VERSION" | sort -V | tail -n1`  # pick the higher version among the two
+        echo Last tag: $LAST_TAG · Next version: $NEXT_VERSION · Release version: $RELEASE_VERSION · Build version: $VERSION
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 9.0.x
+    # - name: Restore dependencies
+    #   run: dotnet restore
+    - name: Build
+      run: |
+        RELEASE_NOTES=${RELEASE_NOTES//|/%0A}
+        RELEASE_NOTES=${RELEASE_NOTES// - /%0A- }
+        RELEASE_NOTES=${RELEASE_NOTES// • /%0A• }
+        RELEASE_NOTES=${RELEASE_NOTES//  /%0A%0A}
+        RELEASE_NOTES=${RELEASE_NOTES//$'\n'/%0A}
+        RELEASE_NOTES=${RELEASE_NOTES//\"/%22}
+        RELEASE_NOTES=${RELEASE_NOTES//,/%2C}
+        RELEASE_NOTES=${RELEASE_NOTES//;/%3B}
+        dotnet build $PROJECT_PATH --configuration $CONFIGURATION -p:Version=$VERSION -p:ReleaseNotes="$RELEASE_NOTES"
+    - name: Test
+      run: dotnet test $UNITTEST_PATH --verbosity normal --configuration $CONFIGURATION
+    # - name: Pack
+    #   run: dotnet pack $PROJECT_PATH --no-build --configuration $CONFIGURATION -p:Version=$VERSION -p:ReleaseNotes="$RELEASE_NOTES"
+    # - name: Upload artifact
+    #   uses: actions/upload-artifact@v5
+    #   with:
+    #     name: packages
+    #     path: $PACKAGES_PATH/*.nupkg
+
+    - name: NuGet login (OIDC → temp API key)
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: ${{ secrets.NUGET_USER }}
+    - name: Nuget push
+      run: dotnet nuget push $PACKAGES_PATH/*.nupkg --api-key ${{steps.login.outputs.NUGET_API_KEY}} --skip-duplicate --source https://api.nuget.org/v3/index.json
+    # run: dotnet nuget push $PACKAGES_PATH/*.nupkg --api-key ${{secrets.NUGETAPIKEY}} --skip-duplicate --source https://api.nuget.org/v3/index.json
+
+    - name: Git tag
+      run: |
+        git tag v$VERSION
+        git push --tags

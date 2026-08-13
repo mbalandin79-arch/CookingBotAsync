@@ -1,14 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 18
-VisualStudioVersion = 18.8.12021.73
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34024.191
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CookingBot", "CookingBot.csproj", "{46B6B7D0-F054-460F-AC88-B795EF59C77C}"
-	ProjectSection(ProjectDependencies) = postProject
-		{11645CD4-C583-B59F-3517-6FCEE3D7A868} = {11645CD4-C583-B59F-3517-6FCEE3D7A868}
-	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Otus.ToDoList.ConsoleBot", "..\Дополнение к ДЗ8\Otus.ToDoList.ConsoleBot\Otus.ToDoList.ConsoleBot.csproj", "{11645CD4-C583-B59F-3517-6FCEE3D7A868}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Telegram.Bot", "..\Дополнение к ДЗ9\Telegram.Bot-master\src\Telegram.Bot\Telegram.Bot.csproj", "{D3CB17A3-98BC-4C80-A6EE-CB002AC6A859}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -20,10 +17,10 @@ Global
 		{46B6B7D0-F054-460F-AC88-B795EF59C77C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{46B6B7D0-F054-460F-AC88-B795EF59C77C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{46B6B7D0-F054-460F-AC88-B795EF59C77C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{11645CD4-C583-B59F-3517-6FCEE3D7A868}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{11645CD4-C583-B59F-3517-6FCEE3D7A868}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{11645CD4-C583-B59F-3517-6FCEE3D7A868}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{11645CD4-C583-B59F-3517-6FCEE3D7A868}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3CB17A3-98BC-4C80-A6EE-CB002AC6A859}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3CB17A3-98BC-4C80-A6EE-CB002AC6A859}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3CB17A3-98BC-4C80-A6EE-CB002AC6A859}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3CB17A3-98BC-4C80-A6EE-CB002AC6A859}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,141 @@
+// GENERATED FILE - DO NOT MODIFY MANUALLY
+namespace Telegram.Bot.Requests;
+
+/// <summary>Use this method to send a native poll.<para>Returns: The sent <see cref="Message"/> is returned.</para></summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
+public partial class SendPollRequest() : RequestBase<Message>("sendPoll"), IChatTargetable, IBusinessConnectable
+{
+    /// <summary>Unique identifier for the target chat or username of the target bot, supergroup or channel in the format <c>@username</c>. Polls can't be sent to channel direct messages chats.</summary>
+    [JsonPropertyName("chat_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required ChatId ChatId { get; set; }
+
+    /// <summary>Poll question, 1-300 characters</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required string Question { get; set; }
+
+    /// <summary>A list of 1-12 answer options</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+    public required IEnumerable<InputPollOption> Options { get; set; }
+
+    /// <summary>Unique identifier of the business connection on behalf of which the message will be sent</summary>
+    [JsonPropertyName("business_connection_id")]
+    public string? BusinessConnectionId { get; set; }
+
+    /// <summary>Unique identifier for the target message thread (topic) of a forum; for forum supergroups and private chats of bots with forum topic mode enabled only</summary>
+    [JsonPropertyName("message_thread_id")]
+    public int? MessageThreadId { get; set; }
+
+    /// <summary>Mode for parsing entities in the question. See <a href="https://core.telegram.org/bots/api#formatting-options">formatting options</a> for more details. Currently, only custom emoji entities are allowed.</summary>
+    [JsonPropertyName("question_parse_mode")]
+    public ParseMode QuestionParseMode { get; set; }
+
+    /// <summary>A list of special entities that appear in the poll question. It can be specified instead of <see cref="QuestionParseMode">QuestionParseMode</see>.</summary>
+    [JsonPropertyName("question_entities")]
+    public IEnumerable<MessageEntity>? QuestionEntities { get; set; }
+
+    /// <summary><see langword="true"/>, if the poll needs to be anonymous, defaults to <see langword="true"/></summary>
+    [JsonPropertyName("is_anonymous")]
+    public bool? IsAnonymous { get; set; }
+
+    /// <summary>Poll type, <see cref="PollType.Quiz">Quiz</see> or <see cref="PollType.Regular">Regular</see>, defaults to <see cref="PollType.Regular">Regular</see></summary>
+    public PollType? Type { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if the poll allows multiple answers, defaults to <see langword="false"/></summary>
+    [JsonPropertyName("allows_multiple_answers")]
+    public bool AllowsMultipleAnswers { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if the poll allows to change chosen answer options, defaults to <see langword="false"/> for quizzes and to <see langword="true"/> for regular polls</summary>
+    [JsonPropertyName("allows_revoting")]
+    public bool AllowsRevoting { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if the poll options must be shown in random order</summary>
+    [JsonPropertyName("shuffle_options")]
+    public bool ShuffleOptions { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if answer options can be added to the poll after creation; not supported for anonymous polls and quizzes</summary>
+    [JsonPropertyName("allow_adding_options")]
+    public bool AllowAddingOptions { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if poll results must be shown only after the poll closes</summary>
+    [JsonPropertyName("hide_results_until_closes")]
+    public bool HideResultsUntilCloses { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if voting is limited to users who have been members of the chat where the poll is being sent for more than 24 hours; for channel chats only</summary>
+    [JsonPropertyName("members_only")]
+    public bool MembersOnly { get; set; }
+
+    /// <summary>A list of 0-12 two-letter <a href="https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2">ISO 3166-1 alpha-2</a> country codes indicating the countries from which users can vote in the poll; for channel chats only. Use “FT” as a country code to allow users with anonymous numbers to vote. If omitted or empty, then users from any country can participate in the poll.</summary>
+    [JsonPropertyName("country_codes")]
+    public IEnumerable<string>? CountryCodes { get; set; }
+
+    /// <summary>A list of monotonically increasing 0-based identifiers of the correct answer options, required for polls in quiz mode</summary>
+    [JsonPropertyName("correct_option_ids")]
+    public IEnumerable<int>? CorrectOptionIds { get; set; }
+
+    /// <summary>Text that is shown when a user chooses an incorrect answer or taps on the lamp icon in a quiz-style poll, 0-200 characters with at most 2 line feeds after entities parsing</summary>
+    public string? Explanation { get; set; }
+
+    /// <summary>Mode for parsing entities in the explanation. See <a href="https://core.telegram.org/bots/api#formatting-options">formatting options</a> for more details.</summary>
+    [JsonPropertyName("explanation_parse_mode")]
+    public ParseMode ExplanationParseMode { get; set; }
+
+    /// <summary>A list of special entities that appear in the poll explanation. It can be specified instead of <see cref="ExplanationParseMode">ExplanationParseMode</see>.</summary>
+    [JsonPropertyName("explanation_entities")]
+    public IEnumerable<MessageEntity>? ExplanationEntities { get; set; }
+
+    /// <summary>Media added to the quiz explanation</summary>
+    [JsonPropertyName("explanation_media")]
+    public InputPollMedia? ExplanationMedia { get; set; }
+
+    /// <summary>Amount of time in seconds the poll will be active after creation, 5-2628000. Can't be used together with <see cref="CloseDate">CloseDate</see>.</summary>
+    [JsonPropertyName("open_period")]
+    public int? OpenPeriod { get; set; }
+
+    /// <summary>Point in time when the poll will be automatically closed. Must be at least 5 and no more than 2628000 seconds in the future. Can't be used together with <see cref="OpenPeriod">OpenPeriod</see>.</summary>
+    [JsonPropertyName("close_date")]
+    [JsonConverter(typeof(UnixDateTimeConverter))]
+    public DateTime? CloseDate { get; set; }
+
+    /// <summary>Pass <see langword="true"/> if the poll needs to be immediately closed. This can be useful for poll preview.</summary>
+    [JsonPropertyName("is_closed")]
+    public bool IsClosed { get; set; }
+
+    /// <summary>Description of the poll to be sent, 0-1024 characters after entities parsing</summary>
+    public string? Description { get; set; }
+
+    /// <summary>Mode for parsing entities in the poll description. See <a href="https://core.telegram.org/bots/api#formatting-options">formatting options</a> for more details.</summary>
+    [JsonPropertyName("description_parse_mode")]
+    public ParseMode DescriptionParseMode { get; set; }
+
+    /// <summary>A list of special entities that appear in the poll description, which can be specified instead of <see cref="DescriptionParseMode">DescriptionParseMode</see></summary>
+    [JsonPropertyName("description_entities")]
+    public IEnumerable<MessageEntity>? DescriptionEntities { get; set; }
+
+    /// <summary>Media added to the poll description</summary>
+    public InputPollMedia? Media { get; set; }
+
+    /// <summary>Sends the message <a href="https://telegram.org/blog/channels-2-0#silent-messages">silently</a>. Users will receive a notification with no sound.</summary>
+    [JsonPropertyName("disable_notification")]
+    public bool DisableNotification { get; set; }
+
+    /// <summary>Protects the contents of the sent message from forwarding and saving</summary>
+    [JsonPropertyName("protect_content")]
+    public bool ProtectContent { get; set; }
+
+    /// <summary>Pass <see langword="true"/> to allow up to 1000 messages per second, ignoring <a href="https://core.telegram.org/bots/faq#how-can-i-message-all-of-my-bot-39s-subscribers-at-once">broadcasting limits</a> for a fee of 0.1 Telegram Stars per message. The relevant Stars will be withdrawn from the bot's balance.</summary>
+    [JsonPropertyName("allow_paid_broadcast")]
+    public bool AllowPaidBroadcast { get; set; }
+
+    /// <summary>Unique identifier of the message effect to be added to the message; for private chats only</summary>
+    [JsonPropertyName("message_effect_id")]
+    public string? MessageEffectId { get; set; }
+
+    /// <summary>Description of the message to reply to</summary>
+    [JsonPropertyName("reply_parameters")]
+    public ReplyParameters? ReplyParameters { get; set; }
+
+    /// <summary>Additional interface options. An object for an <a href="https://core.telegram.org/bots/features#inline-keyboards">inline keyboard</a>, <a href="https://core.telegram.org/bots/features#keyboards">custom reply keyboard</a>, instructions to remove a reply keyboard or to force a reply from the user.</summary>
+    [JsonPropertyName("reply_markup")]
+    public ReplyMarkup? ReplyMarkup { get; set; }
+}
