@@ -2,13 +2,13 @@
 
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Дополнение к ДЗ9\Telegram.Bot-master\src\Telegram.Bot\Telegram.Bot.csproj" />
+		<ProjectReference Include="..\Дополнение к ДЗ9\Telegram.Bot\src\Telegram.Bot\Telegram.Bot.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

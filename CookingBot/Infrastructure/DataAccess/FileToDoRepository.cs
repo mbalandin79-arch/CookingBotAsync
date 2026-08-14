@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CookingBot.Core.DataAccess;
 using CookingBot.Core.Entities;
-using Otus.ToDoList.ConsoleBot.Types;
+using Telegram.Bot.Types;
 
 namespace CookingBot.Infrastructure.DataAccess
 {

@@ -23,7 +23,7 @@ namespace CookingBot
                 using JsonDocument doc = JsonDocument.Parse(json);
                 string botToken = doc.RootElement.GetProperty("BotToken").GetString() ?? string.Empty;
 
-                if(string.IsNullOrEmpty(botToken) || botToken == "Put_Your_Bot_Token_Here")
+                if (string.IsNullOrEmpty(botToken) || botToken == "Put_Your_Bot_Token_Here")
                 {
                     Console.WriteLine(" Токен бота не задан в appsettings.json");
                     Console.WriteLine(" Получите токен у @BotFather и вставьте в файл");
@@ -36,7 +36,7 @@ namespace CookingBot
 
                 using var cts = new CancellationTokenSource();
                 FileUserRepository userRepository = new FileUserRepository();
-                FileToDoRepository toDoRepository = new FileToDoRepository("Todos");
+                FileToDoRepository toDoRepository = new FileToDoRepository("Todos");             
                 ToDoService toDoService = new ToDoService(toDoRepository);
                 ToDoReportService toDoReportService = new ToDoReportService(toDoService);
                 UserService userService = new UserService(userRepository);
@@ -63,7 +63,7 @@ namespace CookingBot
                     Console.WriteLine($"Файл: {item.GetFileName()}, Строка: {item.GetFileLineNumber()}, Метод: {item.GetMethod()}");
                 }
                 if (ex.InnerException != null)
-                {                    
+                {
                     Console.WriteLine(" Внутреннее исключение:");
                     Console.WriteLine($" Тип: {ex.InnerException.GetType().Name}");
                     Console.WriteLine($" Сообщение: {ex.InnerException.Message}");
@@ -75,6 +75,6 @@ namespace CookingBot
                     }
                 }
             }
-        }        
-    }    
+        }
+    }
 }

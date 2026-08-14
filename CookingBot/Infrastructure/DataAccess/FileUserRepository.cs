@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using CookingBot.Core.DataAccess;
 using CookingBot.Core.Entities;
-using Otus.ToDoList.ConsoleBot.Types;
+using Telegram.Bot.Types;
 
 namespace CookingBot.Infrastructure.DataAccess
 {
@@ -31,7 +31,7 @@ namespace CookingBot.Infrastructure.DataAccess
         }
 
         private string GetFilePath(Guid userId) => Path.Combine(_folderPath, $"{userId}.json");
-        
+
         private async Task WriteToFileUserAsync(ToDoUser user, CancellationToken ct)
         {
             var filePath = GetFilePath(user.UserId);

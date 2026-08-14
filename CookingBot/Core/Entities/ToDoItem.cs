@@ -1,10 +1,10 @@
-﻿using Otus.ToDoList.ConsoleBot.Types;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Telegram.Bot.Types;
 using static CookingBot.Core.Entities.ToDoUser;
 
 namespace CookingBot.Core.Entities
