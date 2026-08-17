@@ -32,60 +32,20 @@ namespace CookingBot.Core.Services
             }
         }
 
-        private async Task ChangeStateAsync(Guid userId, ToDoUser.ToDoUserState expected, ToDoUser.ToDoUserState target, CancellationToken ct)
+        public async Task ChangeStateAsync(Guid userId, ToDoUser.ToDoUserState target, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (userId == default(Guid))
                 return;
 
             var user = await _userRepository.GetUserByUserIdAsync(userId, ct);
-            if (user != null && user.State == expected)
+            if (user != null)
             {
                 user.State = target;
                 await _userRepository.UpdateAsync(user, ct);
             }
         }
-
-        public async Task ChangeStateUserFromAdminToModerator(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Admin, ToDoUser.ToDoUserState.Moderator, ct);
-        }
-
-        public async Task ChangeStateUserFromAdvancedToMember(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Advanced, ToDoUser.ToDoUserState.Member, ct);
-        }
-
-        public async Task ChangeStateUserFromAdvancedToModerator(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Advanced, ToDoUser.ToDoUserState.Moderator, ct);
-        }
-
-        public async Task ChangeStateUserFromGuestToMember(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Guest, ToDoUser.ToDoUserState.Member, ct);
-        }
-
-        public async Task ChangeStateUserFromMemberToAdvanced(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Member, ToDoUser.ToDoUserState.Advanced, ct);
-        }
-
-        public async Task ChangeStateUserFromMemberToGuest(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Member, ToDoUser.ToDoUserState.Guest, ct);
-        }
-
-        public async Task ChangeStateUserFromModeratorToAdmin(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Moderator, ToDoUser.ToDoUserState.Admin, ct);
-        }
-
-        public async Task ChangeStateUserFromModeratorToAdvanced(Guid userId, CancellationToken ct)
-        {
-            await ChangeStateAsync(userId, ToDoUser.ToDoUserState.Moderator, ToDoUser.ToDoUserState.Advanced, ct);
-        }
-
+                
         public async Task DeleteUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -115,6 +75,12 @@ namespace CookingBot.Core.Services
         public async Task<ToDoUser?> GetUserAsync(long telegramUserId, CancellationToken ct) // поиск Пользователя в БД и возврат всей записи пользователя либо NULL
         {
             return await _userRepository.GetUserByTelegramUserIdAsync(telegramUserId, ct);
+        }
+
+        public async Task<IReadOnlyList<ToDoUser>> GetAllUsersAsync(CancellationToken ct) // поиск Пользователя в БД и возврат всей записи пользователя либо NULL
+        {
+            ct.ThrowIfCancellationRequested();
+            return await _userRepository.GetAllUsersAsync(ct);
         }
 
         public async Task<ToDoUser?> GetUserByUserIdAsync(Guid userId, CancellationToken ct)

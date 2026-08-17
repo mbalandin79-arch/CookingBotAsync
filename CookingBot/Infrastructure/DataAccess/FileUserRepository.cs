@@ -114,6 +114,30 @@ namespace CookingBot.Infrastructure.DataAccess
             }
         }
 
+        public async Task<IReadOnlyList<ToDoUser>> GetAllUsersAsync(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            await _semaphore.WaitAsync(ct);
+            try
+            {
+                var users = new List<ToDoUser>();
+                foreach (var file in Directory.GetFiles(_folderPath, "*.json"))
+                {
+                    var json = await File.ReadAllTextAsync(file, ct);
+                    var user = JsonSerializer.Deserialize<ToDoUser>(json, _jsonOptions);
+                    if (user != null)
+                    {
+                        users.Add(user);
+                    }
+                }
+                return users;
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+
         public async Task UpdateAsync(ToDoUser user, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();

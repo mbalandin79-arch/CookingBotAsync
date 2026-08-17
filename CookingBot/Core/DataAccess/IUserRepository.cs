@@ -15,6 +15,9 @@ namespace CookingBot.Core.DataAccess
         // Возвращает всю информацию о пользователе по telegramUserId
         Task<ToDoUser?> GetUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct);
 
+        // Возвращает список всех зарегистрированных пользователей
+        Task<IReadOnlyList<ToDoUser>> GetAllUsersAsync(CancellationToken ct);
+
         // Добавляет пользователя
         Task AddAsync(ToDoUser user, CancellationToken ct);
 
