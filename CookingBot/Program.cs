@@ -10,6 +10,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using CookingBot.Core.Exceptions;
 
 namespace CookingBot
 {
@@ -20,54 +21,15 @@ namespace CookingBot
             try
             {
                 string settingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
-                if (!File.Exists(settingsPath))
+                (string? botToken, string? errorMessage) = await GetToken(settingsPath);
+                if (errorMessage != null)
                 {
-                    Console.WriteLine($"Файл appsettings.json не найден по пути: {settingsPath}");
-                    Console.WriteLine("Создайте файл и добавьте в него BotToken");
-                    return;
-                }
-
-                string botToken;
-
-                try
-                {
-                    var json = await File.ReadAllTextAsync(settingsPath, CancellationToken.None);
-                    using var doc = JsonDocument.Parse(json);
-
-                    if (!doc.RootElement.TryGetProperty("BotToken", out var tokenElement))
-                    {
-                        Console.WriteLine("В файле appsettings.json отсутствует свойство BotToken");
-                        return;
-                    }
-
-                    botToken = tokenElement.GetString() ?? string.Empty;
-                }
-                catch (JsonException ex)
-                {
-                    Console.WriteLine($"Ошибка парсинга appsettings.json: {ex.Message}");
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Произошла ошибка при чтении настроек: {ex.Message}");
-                    return;
-                }
-
-                if (string.IsNullOrEmpty(botToken) || botToken == "Put_Your_Bot_Token_Here")
-                {
-                    Console.WriteLine("Токен бота не задан в appsettings.json");
-                    Console.WriteLine("Получите токен у @BotFather и вставьте в файл");
-                    return;
-                }
-
-                if (botToken.Length < 10)
-                {
-                    Console.WriteLine("Токен выглядит некорректным (слишком короткий). Проверьте appsettings.json");
+                    Console.WriteLine(errorMessage);
                     return;
                 }
 
                 Console.WriteLine("Бот запускается...");
-                Console.WriteLine($"Токен: (задан, {botToken.Length} символов)");
+                Console.WriteLine($"Токен: (задан, {botToken!.Length} символов)");
                 Console.WriteLine();
 
                 using var cts = new CancellationTokenSource();
@@ -114,6 +76,41 @@ namespace CookingBot
             catch (Exception ex)
             {
                 Console.WriteLine("Произошла непредвиденная ошибка: " + ex.Message);
+            }
+        }
+
+        private static async Task<(string? botToken, string? errorMessage)> GetToken(string settingsPath)
+        {
+            if (!File.Exists(settingsPath))
+            {
+                return (null, $"Файл appsettings.json не найден по пути: {settingsPath}\nСоздайте файл и добавьте в него botToken");
+            }
+
+            try
+            {
+                var json = await File.ReadAllTextAsync(settingsPath, CancellationToken.None);
+                using var doc = JsonDocument.Parse(json);
+
+                if (!doc.RootElement.TryGetProperty("BotToken", out var tokenElement))
+                    return (null, "В файле appsettings.json отсутствует свойство BotToken");
+
+                string botToken = tokenElement.GetString() ?? string.Empty;
+
+                if (string.IsNullOrEmpty(botToken) || botToken == "Put_Your_Bot_Token_Here")
+                    return (null, "Токен бота не задан в appsettings.json\nПолучите токен у @BotFather и вставьте в файл");
+
+                if (botToken.Length < 10)
+                    return (null, "Токен выглядит некорректным (слишком короткий). Проверьте appsettings.json");
+
+                return (botToken, null);
+            }
+            catch (JsonException ex)
+            {
+                return (null, $"Ошибка парсинга appsettings.json: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                return (null, $"Произошла непредвиденная ошибка: {ex.Message}");
             }
         }
     }
