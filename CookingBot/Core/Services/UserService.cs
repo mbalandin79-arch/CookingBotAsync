@@ -10,7 +10,7 @@ using CookingBot.Core.Entities;
 namespace CookingBot.Core.Services
 {
     internal class UserService : IUserService
-    {        
+    {
         private readonly IUserRepository _userRepository;
 
         public UserService(IUserRepository userRepository)
@@ -44,8 +44,8 @@ namespace CookingBot.Core.Services
                 user.State = target;
                 await _userRepository.UpdateAsync(user, ct);
             }
-        }
-                
+        }        
+
         public async Task DeleteUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -105,6 +105,6 @@ namespace CookingBot.Core.Services
                 return user;
             }
             return existUser;
-        }
+        }        
     }
 }

@@ -23,7 +23,7 @@ namespace CookingBot.Core.DataAccess
 
         // Удаляет пользователя по userId
         Task DeleteAsync(Guid userId, CancellationToken ct);
-
+                
         // Изменяет существующего пользователя
         Task UpdateAsync(ToDoUser user, CancellationToken ct);
     }

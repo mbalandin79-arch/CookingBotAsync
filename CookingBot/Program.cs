@@ -6,6 +6,7 @@ using System.Net;
 using CookingBot.Core.Services;
 using CookingBot.Infrastructure.DataAccess;
 using CookingBot.TelegramBot;
+using CookingBot.TelegramBot.Scenarios;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -26,7 +27,7 @@ namespace CookingBot
                 {
                     Console.WriteLine(errorMessage);
                     return;
-                }
+                }                
 
                 Console.WriteLine("Бот запускается...");
                 Console.WriteLine($"Токен: (задан, {botToken!.Length} символов)");
@@ -38,7 +39,12 @@ namespace CookingBot
                 var toDoService = new ToDoService(toDoRepository);
                 var toDoReportService = new ToDoReportService(toDoService);
                 var userService = new UserService(userRepository);
-                var handler = new UpdateHandler(userService, toDoService, toDoReportService);
+                var contextRepository = new InMemoryScenarioContextRepository();
+                var scenarios = new List<IScenario>
+                {
+                    new AddTaskScenario(userService, toDoService)
+                };
+                var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios);
                 var botClient = new TelegramBotClient(botToken);
 
                 try
@@ -98,7 +104,7 @@ namespace CookingBot
 
                 if (string.IsNullOrEmpty(botToken) || botToken == "Put_Your_Bot_Token_Here")
                     return (null, "Токен бота не задан в appsettings.json\nПолучите токен у @BotFather и вставьте в файл");
-
+                
                 if (botToken.Length < 10)
                     return (null, "Токен выглядит некорректным (слишком короткий). Проверьте appsettings.json");
 
