@@ -574,7 +574,7 @@ namespace CookingBot.TelegramBot
                         await telegramBotClient.SendMessage(chat, " Вы не зарегистрированы. Введите \"/start\"", cancellationToken: ct);
                         return;
                     }
-                    var newToDoItem = await _todoService.AddAsync(user!, newTask, ct);
+                    var newToDoItem = await _todoService.AddAsync(user!, newTask, DateTime.UtcNow.AddDays(1), ct);  // добавлена временная заглушка
 
                     var str = new StringBuilder();
                     str.AppendLine($" Задача добавлена:");

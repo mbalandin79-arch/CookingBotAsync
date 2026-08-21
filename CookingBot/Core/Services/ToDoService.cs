@@ -46,7 +46,7 @@ namespace CookingBot.Core.Services
             }
         }
 
-        public async Task<ToDoItem> AddAsync(ToDoUser user, string name, CancellationToken ct)
+        public async Task<ToDoItem> AddAsync(ToDoUser user, string name, DateTime deadline, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(name))
@@ -58,7 +58,7 @@ namespace CookingBot.Core.Services
             CheckLengthLimits(name);
             await CheckDuplicateAsync(user.UserId, name, ct);
 
-            var item = new ToDoItem(user, name);
+            var item = new ToDoItem(user, name, deadline);
             await _toDoRepository.AddAsync(item, ct);
             return item;
         }

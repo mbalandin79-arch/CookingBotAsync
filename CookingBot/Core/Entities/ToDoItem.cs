@@ -24,18 +24,20 @@ namespace CookingBot.Core.Entities
         public DateTime CreatedAt { get; }
         public ToDoItemState State { get; set; }
         public DateTime? StateChangedAt { get; set; }
+        public DateTime Deadline { get; set; }
 
-        public ToDoItem(ToDoUser user, string name)
+        public ToDoItem(ToDoUser user, string name, DateTime deadline)
         {
             User = user;
             Name = name;
             Id = Guid.NewGuid();
             CreatedAt = DateTime.UtcNow; // универсальная дата и время на данный момент для всех часовых поясов
             State = ToDoItemState.Active;
+            Deadline = deadline;
         }
 
         [JsonConstructor]
-        public ToDoItem(Guid id, ToDoUser user, string name, string content, DateTime createdAt, ToDoItemState state, DateTime? stateChangedAt)
+        public ToDoItem(Guid id, ToDoUser user, string name, string content, DateTime createdAt, ToDoItemState state, DateTime? stateChangedAt, DateTime deadline)
         {
             Id = id;
             User = user;
@@ -44,6 +46,7 @@ namespace CookingBot.Core.Entities
             CreatedAt = createdAt;
             State = state;
             StateChangedAt = stateChangedAt;
+            Deadline = deadline;
         }
     }
 }
