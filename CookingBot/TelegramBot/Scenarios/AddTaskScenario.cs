@@ -119,6 +119,11 @@ namespace CookingBot.TelegramBot.Scenarios
                                 await telegramBotClient.SendMessage(chat, e.Message, cancellationToken: ct);
                                 return ScenarioResult.Completed;
                             }
+                            catch (Exception e)
+                            {
+                                await telegramBotClient.SendMessage(chat, $"Непредвиденная ошибка: {e.Message}", cancellationToken: ct);
+                                return ScenarioResult.Completed;
+                            }
                         }
                     default:
                         return ScenarioResult.Completed;

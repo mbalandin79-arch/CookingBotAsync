@@ -931,11 +931,23 @@ namespace CookingBot.TelegramBot
                 return;
             }
 
-            var result = await scenario.HandleMessageAsync(telegramBotClient, context, update, ct);
+            ScenarioResult result;
+            try
+            {
+                result = await scenario.HandleMessageAsync(telegramBotClient, context, update, ct);
+            }
+            catch (Exception ex)
+            {
+                await _contextRepository.ResetContext(userId, ct);
+                await telegramBotClient.SendMessage(update.Message!.Chat, $"Ошибка при выполнении сценария: {ex.Message}", replyMarkup: new ReplyKeyboardRemove(), cancellationToken: ct);
+                await SendMainMenuAsync(telegramBotClient, update.Message!.Chat, userId, ct);
+                return;
+            }
+
             if (result == ScenarioResult.Completed)
             {
                 await _contextRepository.ResetContext(userId, ct);
-                await telegramBotClient.SendMessage(update.Message!.Chat, " ", replyMarkup: new ReplyKeyboardRemove(), cancellationToken: ct);
+                await telegramBotClient.SendMessage(update.Message!.Chat, "✅", replyMarkup: new ReplyKeyboardRemove(), cancellationToken: ct);
                 await SendMainMenuAsync(telegramBotClient, update.Message!.Chat, userId, ct);
             }
             else
