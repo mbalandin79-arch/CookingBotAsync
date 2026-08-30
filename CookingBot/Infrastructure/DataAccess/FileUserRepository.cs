@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using CookingBot.Core.DataAccess;
@@ -18,7 +19,8 @@ namespace CookingBot.Infrastructure.DataAccess
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions()
         {
             PropertyNameCaseInsensitive = true,
-            WriteIndented = true
+            WriteIndented = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         public FileUserRepository(string folderPath = "UserData")
@@ -31,7 +33,7 @@ namespace CookingBot.Infrastructure.DataAccess
         }
 
         private string GetFilePath(Guid userId) => Path.Combine(_folderPath, $"{userId}.json");
-        
+
         private async Task WriteToFileUserAsync(ToDoUser user, CancellationToken ct)
         {
             var filePath = GetFilePath(user.UserId);

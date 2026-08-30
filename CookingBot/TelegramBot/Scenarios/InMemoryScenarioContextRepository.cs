@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,7 @@ namespace CookingBot.TelegramBot.Scenarios
 {
     internal class InMemoryScenarioContextRepository : IScenarioContextRepository
     {
-        private readonly Dictionary<long, ScenarioContext> _scenarioContext = new Dictionary<long, ScenarioContext>();
+        private readonly ConcurrentDictionary<long, ScenarioContext> _scenarioContext = new ConcurrentDictionary<long, ScenarioContext>();
 
         public InMemoryScenarioContextRepository() { }
 
@@ -29,7 +30,7 @@ namespace CookingBot.TelegramBot.Scenarios
         public Task ResetContext(long userId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            _scenarioContext.Remove(userId);
+            _scenarioContext.TryRemove(userId, out var value);
             return Task.CompletedTask;
         }
     }

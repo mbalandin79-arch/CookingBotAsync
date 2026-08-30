@@ -9,6 +9,15 @@ namespace CookingBot.Core.Services
 {
     public interface IToDoService
     {
+        // Возвращает все задачи всех пользователей
+        // По замыслу проекта, незарегистрированный пользователь должен иметь возможность только просмотра всех Рецептов (задач)
+        Task<IReadOnlyList<ToDoItem>> GetAllTasksAsync(CancellationToken ct);
+
+        // Возвращает все задачи, которые начинаются на namePrefix
+        // Поиск по всем задачам
+        // По замыслу проекта, незарегистрированный пользователь должен иметь возможность только просмотра всех Рецептов (задач)
+        Task<IReadOnlyList<ToDoItem>> FindAllAsync(string namePrefix, CancellationToken ct);
+
         // Возвращает все задачи для UserId
         Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct);
 
@@ -19,7 +28,7 @@ namespace CookingBot.Core.Services
         Task<ToDoItem?> GetTaskAsync(Guid id, CancellationToken ct);
 
         // Добавляет задачи в общий Список и возвращает добавленную задачу
-        Task<ToDoItem> AddAsync(ToDoUser user, string name, DateTime deadline, CancellationToken ct);
+        Task<ToDoItem> AddAsync(ToDoUser user, string name, DateTime deadline, ToDoItem.MainCategory category, string? subCategory, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct);
 
         // Изменяет состояние задачи в общем Списоке по id с Active на Completed 
         Task MarkCompletedAsync(Guid id, CancellationToken ct);
@@ -35,5 +44,16 @@ namespace CookingBot.Core.Services
 
         // Возвращает все задачи пользователя, которые начинаются на namePrefix, использует метод IToDoRepository.Find
         Task<IReadOnlyList<ToDoItem>> FindAsync(ToDoUser user, string namePrefix, CancellationToken ct);
+
+        // Поиск по ингредиенту (по всем пользователям)
+        Task<IReadOnlyList<ToDoItem>> FindByIngredientAsync(string ingredient, CancellationToken ct);
+
+        // Поиск по категории (по всем пользователям)
+        Task<IReadOnlyList<ToDoItem>> FindByCategoryAsync(ToDoItem.MainCategory category, CancellationToken ct);
+
+        // Поиск по частичному совпадению имени (по всем пользователям)
+        Task<IReadOnlyList<ToDoItem>> FindByNameContainsAsync(string namePart, CancellationToken ct);
+
+        Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct);
     }
 }

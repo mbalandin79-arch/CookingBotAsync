@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Net;
 using CookingBot.Core.Services;
+using CookingBot.Core.Exceptions;
 using CookingBot.Infrastructure.DataAccess;
 using CookingBot.TelegramBot;
 using CookingBot.TelegramBot.Scenarios;
@@ -11,7 +12,6 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using CookingBot.Core.Exceptions;
 
 namespace CookingBot
 {
@@ -36,8 +36,10 @@ namespace CookingBot
                 using var cts = new CancellationTokenSource();
                 var userRepository = new FileUserRepository();
                 var toDoRepository = new FileToDoRepository("Todos");
+                var toDoListRepository = new FileToDoListRepository("ToDoLists");
                 var toDoService = new ToDoService(toDoRepository);
                 var toDoReportService = new ToDoReportService(toDoService);
+                var toDoListsService = new ToDoListsService(toDoListRepository);
                 var userService = new UserService(userRepository);
                 var contextRepository = new InMemoryScenarioContextRepository();
                 var scenarios = new List<IScenario>
