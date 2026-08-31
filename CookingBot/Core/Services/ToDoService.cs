@@ -169,7 +169,13 @@ namespace CookingBot.Core.Services
 
         public async Task<IReadOnlyList<ToDoItem>> GetByUserIdAndList(Guid userId, Guid? listId, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            ct.ThrowIfCancellationRequested();
+            var items = await _toDoRepository.GetAllByUserIdAsync(userId, ct);
+
+            if(listId == null)
+                return items;
+
+            return items.Where(w => w.List?.Id == listId).ToList();
         }
     }
 }

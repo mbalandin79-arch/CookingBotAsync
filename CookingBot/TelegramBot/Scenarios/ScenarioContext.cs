@@ -11,7 +11,9 @@ namespace CookingBot.TelegramBot.Scenarios
         public enum ScenarioType
         {
             None, 
-            AddTask
+            AddTask,
+            AddList,
+            DeleteList
         }
         public enum ScenarioResult
         {

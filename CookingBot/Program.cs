@@ -39,14 +39,16 @@ namespace CookingBot
                 var toDoListRepository = new FileToDoListRepository("ToDoLists");
                 var toDoService = new ToDoService(toDoRepository);
                 var toDoReportService = new ToDoReportService(toDoService);
-                var toDoListsService = new ToDoListsService(toDoListRepository);
+                var toDoListService = new ToDoListService(toDoListRepository);
                 var userService = new UserService(userRepository);
                 var contextRepository = new InMemoryScenarioContextRepository();
                 var scenarios = new List<IScenario>
                 {
-                    new AddTaskScenario(userService, toDoService)
+                    new AddTaskScenario(userService, toDoService, toDoListService),
+                    new AddListScenario(userService, toDoListService),
+                    new DeleteListScenario(userService, toDoListService, toDoService)
                 };
-                var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios);
+                var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios, toDoListService);
                 var botClient = new TelegramBotClient(botToken);
 
                 try

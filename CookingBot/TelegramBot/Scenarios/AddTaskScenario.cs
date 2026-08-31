@@ -1,7 +1,4 @@
-﻿using CookingBot.Core.Entities;
-using CookingBot.Core.Exceptions;
-using CookingBot.Core.Services;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -10,6 +7,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using CookingBot.Core.Entities;
+using CookingBot.Core.Exceptions;
+using CookingBot.Core.Services;
+using CookingBot.TelegramBot.Dto;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
@@ -20,12 +21,14 @@ namespace CookingBot.TelegramBot.Scenarios
     {
         private readonly IUserService _userService;
         private readonly IToDoService _todoService;
+        private readonly IToDoListService _todoListService;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-        public AddTaskScenario(IUserService userService, IToDoService toDoService)
+        public AddTaskScenario(IUserService userService, IToDoService toDoService, IToDoListService toDoListService)
         {
             _userService = userService;
             _todoService = toDoService;
+            _todoListService = toDoListService;
         }
 
         public bool CanHandle(ScenarioType scenario)
@@ -92,49 +95,7 @@ namespace CookingBot.TelegramBot.Scenarios
 
                             await telegramBotClient.SendMessage(chat, "Выберите категорию:", replyMarkup: Keyboards.BuildCategoryKeyboard(), cancellationToken: ct);
                             context.CurrentStep = "Category";
-                            return ScenarioResult.Transition;
-
-                            //var toDoUser = (ToDoUser)context.Data["user"];
-                            //var taskName = (string)context.Data["name"];
-
-                            //try
-                            //{
-                            //    var item = await _todoService.AddAsync(toDoUser, taskName, deadline, ct);
-                            //    var str = new StringBuilder();
-                            //    str.AppendLine("Задача добавлена:");
-                            //    str.AppendLine($" Id: {item.Id}");
-                            //    str.AppendLine($" Name: {item.Name}");
-                            //    str.AppendLine($" CreatedAt: {item.CreatedAt}");
-                            //    str.AppendLine($" Deadline: {item.Deadline:dd.MM.yyyy}");
-                            //    str.AppendLine($" State: {item.State}");
-                            //    await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
-                            //    return ScenarioResult.Completed;
-                            //}
-                            //catch (TaskCountLimitException e)
-                            //{
-                            //    await telegramBotClient.SendMessage(chat, $"Превышено максимальное количество задач равное {e.TaskCountLimit}", cancellationToken: ct);
-                            //    return ScenarioResult.Completed;
-                            //}
-                            //catch (TaskLengthLimitException e)
-                            //{
-                            //    await telegramBotClient.SendMessage(chat, $"Длина задачи '{e.TaskLength}' превышает максимально допустимое значение {e.TaskLengthLimit}", cancellationToken: ct);
-                            //    return ScenarioResult.Completed;
-                            //}
-                            //catch (DuplicateTaskException e)
-                            //{
-                            //    await telegramBotClient.SendMessage(chat, $"Задача '{e.Task}' уже существует", cancellationToken: ct);
-                            //    return ScenarioResult.Completed;
-                            //}
-                            //catch (ArgumentException e)
-                            //{
-                            //    await telegramBotClient.SendMessage(chat, e.Message, cancellationToken: ct);
-                            //    return ScenarioResult.Completed;
-                            //}
-                            //catch (Exception e)
-                            //{
-                            //    await telegramBotClient.SendMessage(chat, $"Непредвиденная ошибка: {e.Message}", cancellationToken: ct);
-                            //    return ScenarioResult.Completed;
-                            //}
+                            return ScenarioResult.Transition;                            
                         }
 
                     // Шаг 4: Подкатегория
@@ -179,7 +140,31 @@ namespace CookingBot.TelegramBot.Scenarios
                                 context.Data["subCategory"] = subCat.Trim();
                             }
 
+                            var user = (ToDoUser)context.Data["user"];
+                            var lists = await _todoListService.GetUserListsAsync(user.UserId, ct);
+
+                            await telegramBotClient.SendMessage(chat, "Выберите список для рецепта:", replyMarkup: Keyboards.BuildListsKeyboard(lists), cancellationToken: ct);
+                            context.CurrentStep = "List";
+                            return ScenarioResult.Transition;
+                        }
+
+                    // ДЗ
+                    case "List":
+                        {
+                            var data = update.CallbackQuery?.Data;
+                            if (string.IsNullOrEmpty(data))
+                                return ScenarioResult.Transition;
+
+                            var dto = ToDoListCallbackDto.FromString(data);
+                            ToDoList? list = null;
+                            if (dto.ToDoListId != null)
+                            {
+                                list = await _todoListService.GetAsync(dto.ToDoListId.Value, ct);
+                            }
+                            context.Data["list"] = list;
+
                             await telegramBotClient.SendMessage(chat, "Введите ингредиенты через запятую. По ним будет доступен поиск рецепта.\nПример: мука, сахар, яйца\nХотя бы один — обязательно.", cancellationToken: ct);
+
                             context.CurrentStep = "Ingredients";
                             return ScenarioResult.Transition;
                         }
@@ -298,10 +283,11 @@ namespace CookingBot.TelegramBot.Scenarios
             var ingredients = (List<string>)context.Data["ingredients"];
             var hiddenIngredients = (List<string>)context.Data["hiddenIngredients"];
             var steps = (List<string>)context.Data["steps"];
+            var list = (ToDoList?)context.Data["list"];
 
             try
             {
-                var item = await _todoService.AddAsync(toDoUser, taskName, deadline, category, subCategory, ingredients, hiddenIngredients, steps, new ToDoList(toDoUser, taskName), ct);
+                var item = await _todoService.AddAsync(toDoUser, taskName, deadline, category, subCategory, ingredients, hiddenIngredients, steps, list, ct);
 
                 var str = new StringBuilder();
                 str.AppendLine("Рецепт добавлен:");
