@@ -13,7 +13,8 @@ namespace CookingBot.TelegramBot.Scenarios
             None, 
             AddTask,
             AddList,
-            DeleteList
+            DeleteList,
+            DeleteTask
         }
         public enum ScenarioResult
         {

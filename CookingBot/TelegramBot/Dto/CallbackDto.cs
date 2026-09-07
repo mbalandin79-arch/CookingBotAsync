@@ -8,7 +8,7 @@ namespace CookingBot.TelegramBot.Dto
 {
     public class CallbackDto
     {
-        public string Action { get; set; }
+        public string Action { get; set; } = null!;
 
         public static CallbackDto FromString(string input)
         {

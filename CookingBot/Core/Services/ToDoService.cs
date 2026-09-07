@@ -15,6 +15,7 @@ namespace CookingBot.Core.Services
     {
         private int _maxTasks = 0;
         private int _maxLengthTask = 0;
+        private int _maxRecipesPerList = 50;
         private readonly IToDoRepository _toDoRepository;
 
         public ToDoService(IToDoRepository toDoRepository)
@@ -46,7 +47,7 @@ namespace CookingBot.Core.Services
             }
         }
 
-        public async Task<ToDoItem> AddAsync(ToDoUser user, string name, DateTime deadline, ToDoItem.MainCategory category, string? subCategory, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct)
+        public async Task<ToDoItem> AddAsync(ToDoUser user, string name, DateTime deadline, ToDoItem.MainCategory category, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(name))
@@ -57,8 +58,16 @@ namespace CookingBot.Core.Services
             await CheckCountLimitAsync(user.UserId, ct);
             CheckLengthLimits(name);
             await CheckDuplicateAsync(user.UserId, name, ct);
+            if (todoList != null)
+            {
+                var listItems = await GetByUserIdAndList(user.UserId, todoList.Id, ct);
+                if (listItems.Count >= _maxRecipesPerList)
+                {
+                    throw new TaskCountLimitException(_maxRecipesPerList);
+                }
+            }
 
-            var item = new ToDoItem(user, name, deadline, category, subCategory, ingredients, hiddenIngredients, steps, todoList);
+            var item = new ToDoItem(user, name, deadline, category, ingredients, hiddenIngredients, steps, todoList);
             await _toDoRepository.AddAsync(item, ct);
             return item;
         }
@@ -101,11 +110,12 @@ namespace CookingBot.Core.Services
             }
         }
 
-        public async Task SetConfigurationAsync(int maxTasks, int maxLengthTask, CancellationToken ct)
+        public async Task SetConfigurationAsync(int maxTasks, int maxLengthTask, int maxRecipesPerList, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             _maxTasks = maxTasks;
             _maxLengthTask = maxLengthTask;
+            _maxRecipesPerList = maxRecipesPerList;
             await Task.CompletedTask;
         }
 

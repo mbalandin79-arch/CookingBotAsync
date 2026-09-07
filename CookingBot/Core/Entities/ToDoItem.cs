@@ -42,13 +42,12 @@ namespace CookingBot.Core.Entities
         // Оставлено по требованию ДЗ.
         public DateTime Deadline { get; set; }
         public MainCategory Category { get; set; }
-        public string? SubCategory { get; set; }
         public List<string> Ingredients { get; set; }
         public List<string> HiddenIngredients { get; set; }
         public ToDoList? List { get; }
 
 
-        public ToDoItem(ToDoUser user, string name, DateTime deadline, MainCategory category, string? subCategory, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? list)
+        public ToDoItem(ToDoUser user, string name, DateTime deadline, MainCategory category, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? list)
         {
             User = user;
             Name = name;
@@ -57,7 +56,6 @@ namespace CookingBot.Core.Entities
             State = ToDoItemState.Active;
             Deadline = deadline;
             Category = category;
-            SubCategory = subCategory;
             Ingredients = ingredients;
             HiddenIngredients = hiddenIngredients;
             Steps = steps;
@@ -65,7 +63,7 @@ namespace CookingBot.Core.Entities
         }
 
         [JsonConstructor]
-        public ToDoItem(Guid id, ToDoUser user, string name, List<string> steps, DateTime createdAt, ToDoItemState state, DateTime? stateChangedAt, DateTime deadline, MainCategory category, string? subCategory, List<string> ingredients, List<string> hiddenIngredients, ToDoList? list)
+        public ToDoItem(Guid id, ToDoUser user, string name, List<string> steps, DateTime createdAt, ToDoItemState state, DateTime? stateChangedAt, DateTime deadline, MainCategory category, List<string> ingredients, List<string> hiddenIngredients, ToDoList? list)
         {
             Id = id;
             User = user;
@@ -76,7 +74,6 @@ namespace CookingBot.Core.Entities
             StateChangedAt = stateChangedAt;
             Deadline = deadline;
             Category = category;
-            SubCategory = subCategory;
             Ingredients = ingredients;
             HiddenIngredients = hiddenIngredients;
             List = list;
@@ -85,8 +82,7 @@ namespace CookingBot.Core.Entities
         public static string GetCategoryName(MainCategory category)
         {
             return category switch
-            {
-                MainCategory.Other => "Другое",
+            {                
                 MainCategory.Soup => "Суп",
                 MainCategory.Salat => "Салат",
                 MainCategory.Main => "Основное блюдо",
@@ -95,6 +91,7 @@ namespace CookingBot.Core.Entities
                 MainCategory.Bakery => "Выпечка",
                 MainCategory.Breakfast => "Завтрак",
                 MainCategory.Sauce => "Соус",
+                MainCategory.Other => "Без категории",
                 _ => category.ToString()
             };
         }

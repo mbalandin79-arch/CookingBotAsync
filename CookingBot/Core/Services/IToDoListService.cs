@@ -16,5 +16,7 @@ namespace CookingBot.Core.Services
         Task DeleteAsync(Guid id, CancellationToken ct);
 
         Task<IReadOnlyList<ToDoList>> GetUserListsAsync(Guid userId, CancellationToken ct);
+
+        Task SetConfigurationAsync(int maxListsPerUser, CancellationToken ct);
     }
 }

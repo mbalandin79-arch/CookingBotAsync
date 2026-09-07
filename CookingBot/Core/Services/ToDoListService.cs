@@ -12,6 +12,7 @@ namespace CookingBot.Core.Services
     public class ToDoListService : IToDoListService
     {
         private readonly IToDoListRepository _toDoListRepository;
+        private int _maxListsPerUser = 10;
 
         public ToDoListService(IToDoListRepository toDoListRepository)
         {
@@ -45,6 +46,11 @@ namespace CookingBot.Core.Services
                         
             CheckLengthLimits(name);
             await CheckDuplicateAsync(user.UserId, name, ct);
+            var existingLists = await _toDoListRepository.GetByUserIdAsync(user.UserId, ct);
+            if (existingLists.Count >= _maxListsPerUser)
+            {
+                throw new ListCountLimitException(_maxListsPerUser);
+            }
 
             var list = new ToDoList(user, name);
             await _toDoListRepository.AddAsync(list, ct);
@@ -74,6 +80,13 @@ namespace CookingBot.Core.Services
         {
             ct.ThrowIfCancellationRequested();
             return await _toDoListRepository.GetByUserIdAsync(userId, ct);
+        }
+
+        public async Task SetConfigurationAsync(int maxListsPerUser, CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            _maxListsPerUser = maxListsPerUser;
+            await Task.CompletedTask;
         }
     }
 }

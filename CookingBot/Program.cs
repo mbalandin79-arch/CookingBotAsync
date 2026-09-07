@@ -12,6 +12,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using System.Text.Json.Nodes;
 
 namespace CookingBot
 {
@@ -21,35 +22,55 @@ namespace CookingBot
         {
             try
             {
+                using var cts = new CancellationTokenSource();
                 string settingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+                await EnsureConfigurationAsync(settingsPath, cts.Token);
                 (string? botToken, string? errorMessage) = await GetToken(settingsPath);
                 if (errorMessage != null)
                 {
                     Console.WriteLine(errorMessage);
                     return;
-                }                
+                }
 
                 Console.WriteLine("Бот запускается...");
                 Console.WriteLine($"Токен: (задан, {botToken!.Length} символов)");
                 Console.WriteLine();
 
-                using var cts = new CancellationTokenSource();
+                // Чтение лимитов из конфига
+                var configJson = await File.ReadAllTextAsync(settingsPath, cts.Token);
+                using var configDoc = JsonDocument.Parse(configJson);
+                int maxTasks = configDoc.RootElement.TryGetProperty("MaxTasks", out var mt) ? mt.GetInt32() : 100;
+                int maxLengthTask = configDoc.RootElement.TryGetProperty("MaxLengthTask", out var mlt) ? mlt.GetInt32() : 100;
+                int maxListsPerUser = configDoc.RootElement.TryGetProperty("MaxListsPerUser", out var ml) ? ml.GetInt32() : 10;
+                int maxRecipesPerList = configDoc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;
+
                 var userRepository = new FileUserRepository();
                 var toDoRepository = new FileToDoRepository("Todos");
                 var toDoListRepository = new FileToDoListRepository("ToDoLists");
                 var toDoService = new ToDoService(toDoRepository);
+                await toDoService.SetConfigurationAsync(maxTasks, maxLengthTask, maxRecipesPerList, cts.Token);
                 var toDoReportService = new ToDoReportService(toDoService);
                 var toDoListService = new ToDoListService(toDoListRepository);
+                await toDoListService.SetConfigurationAsync(maxListsPerUser, cts.Token);
                 var userService = new UserService(userRepository);
                 var contextRepository = new InMemoryScenarioContextRepository();
                 var scenarios = new List<IScenario>
                 {
                     new AddTaskScenario(userService, toDoService, toDoListService),
                     new AddListScenario(userService, toDoListService),
-                    new DeleteListScenario(userService, toDoListService, toDoService)
+                    new DeleteListScenario(userService, toDoListService, toDoService),
+                    new DeleteTaskScenario(toDoService)
                 };
-                var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios, toDoListService);
+                var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios, toDoListService, settingsPath);
                 var botClient = new TelegramBotClient(botToken);
+
+                // Установка команд для меню BotCommand (базовый набор для всех)
+                await botClient.SetMyCommands(Keyboards.GetCommandsForUser(null), cancellationToken: cts.Token);
+
+                // Установка кнопок меню
+                await botClient.SetChatMenuButton(menuButton: new MenuButtonCommands(), cancellationToken: cts.Token);
+
+                Console.WriteLine($"Конфигурация загружена: MaxTasks={maxTasks}, MaxLengthTask={maxLengthTask}, MaxListsPerUser={maxListsPerUser}, MaxRecipesPerList={maxRecipesPerList}");
 
                 try
                 {
@@ -108,7 +129,7 @@ namespace CookingBot
 
                 if (string.IsNullOrEmpty(botToken) || botToken == "Put_Your_Bot_Token_Here")
                     return (null, "Токен бота не задан в appsettings.json\nПолучите токен у @BotFather и вставьте в файл");
-                
+
                 if (botToken.Length < 10)
                     return (null, "Токен выглядит некорректным (слишком короткий). Проверьте appsettings.json");
 
@@ -121,6 +142,61 @@ namespace CookingBot
             catch (Exception ex)
             {
                 return (null, $"Произошла непредвиденная ошибка: {ex.Message}");
+            }
+        }
+
+        private static async Task EnsureConfigurationAsync(string settingsPath, CancellationToken ct)
+        {
+            JsonObject root;
+            bool needsSave = false;
+
+            if (File.Exists(settingsPath))
+            {
+                var json = await File.ReadAllTextAsync(settingsPath, ct);
+                root = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
+            }
+            else
+            {
+                root = new JsonObject();
+                needsSave = true;
+            }
+
+            // BotToken - заглушка, если отсутствует
+            if (!root.ContainsKey("BotToken"))
+            {
+                root["BotToken"] = "Put_Your_Bot_Token_Here";
+                needsSave = true;
+            }
+
+            // Лимиты - добавляем недостающие
+            if (!root.ContainsKey("MaxTasks"))
+            {
+                root["MaxTasks"] = 100;
+                needsSave = true;
+            }
+
+            if (!root.ContainsKey("MaxLengthTask"))
+            {
+                root["MaxLengthTask"] = 100;
+                needsSave = true;
+            }
+
+            if (!root.ContainsKey("MaxListsPerUser"))
+            {
+                root["MaxListsPerUser"] = 10;
+                needsSave = true;
+            }
+
+            if (!root.ContainsKey("MaxRecipesPerList"))
+            {
+                root["MaxRecipesPerList"] = 50;
+                needsSave = true;
+            }
+
+            if (needsSave)
+            {
+                await File.WriteAllTextAsync(settingsPath, root.ToString(), ct);
+                Console.WriteLine("Конфигурайия обновлена: добавлены недостающие поля.");
             }
         }
     }
