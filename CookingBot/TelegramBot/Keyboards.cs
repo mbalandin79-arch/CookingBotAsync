@@ -158,16 +158,7 @@ namespace CookingBot.TelegramBot
                 new[] { InlineKeyboardButton.WithCallbackData("Нет", "no") }
             });
         }
-
-        public static InlineKeyboardMarkup BuildDeleteTaskKeyboard(Guid taskId)
-        {
-            return new InlineKeyboardMarkup(new[]
-            {
-                new[] { InlineKeyboardButton.WithCallbackData("Да, удалить", $"confirmdeletetask|{taskId}") },
-                new[] { InlineKeyboardButton.WithCallbackData("Отмена", "mainmenu") }
-            });
-        }
-
+        
         public static InlineKeyboardMarkup BuildShowListsKeyboard(IReadOnlyList<ToDoList> lists)
         {
             var rows = new List<List<InlineKeyboardButton>>();
@@ -285,23 +276,7 @@ namespace CookingBot.TelegramBot
                 new[] { InlineKeyboardButton.WithCallbackData("Назад", "mainmenu") }
             });
         }
-
-        public static InlineKeyboardMarkup BuildTaskListKeyboard(IReadOnlyList<ToDoItem> items)
-        {
-            var rows = new List<List<InlineKeyboardButton>>();
-            foreach (var item in items)
-            {
-                var callbackData = new ToDoItemCallbackDto
-                {
-                    Action = "showtask",
-                    ToDoItemId = item.Id
-                }.ToString();
-                rows.Add(new() { InlineKeyboardButton.WithCallbackData(item.Name, callbackData) });
-            }
-            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });
-            return new InlineKeyboardMarkup(rows);
-        }
-
+                
         public static InlineKeyboardMarkup BuildRegistrationKeyboard()
         {
             return new InlineKeyboardMarkup(new[]

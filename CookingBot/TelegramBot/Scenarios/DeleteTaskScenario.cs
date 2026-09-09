@@ -1,5 +1,6 @@
 ﻿using CookingBot.Core.Entities;
 using CookingBot.Core.Services;
+using CookingBot.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,7 +29,8 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
-        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, ScenarioContext context, Update update, CancellationToken ct)
+        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, 
+            ScenarioContext context, Update update, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             var chat = update.Message?.Chat ?? update.CallbackQuery?.Message?.Chat;
@@ -49,7 +51,9 @@ namespace CookingBot.TelegramBot.Scenarios
 
                         context.Data["task"] = task;
 
-                        await telegramBotClient.SendMessage(chat, $"Подтвердите удаление рецепта '{task.Name}':", replyMarkup: Keyboards.BuildKeyboardYesNo(), cancellationToken: ct);
+                        var prompt = $"Подтвердите удаление рецепта '{task.Name}':";
+                        await telegramBotClient.SendMessage(chat, prompt, replyMarkup: Keyboards.BuildKeyboardYesNo(), 
+                            cancellationToken: ct);
                         context.CurrentStep = "Delete";
                         return ScenarioResult.Transition;
                     }
@@ -65,9 +69,19 @@ namespace CookingBot.TelegramBot.Scenarios
 
                         if (answer == "yes")
                         {
-                            var task = (ToDoItem)context.Data["task"];
-                            await _todoService.DeleteAsync(task.Id, ct);
-                            await telegramBotClient.SendMessage(chat, $"Рецепт '{task.Name}' удалён.", cancellationToken: ct);
+                            try
+                            {
+                                var task = (ToDoItem)context.Data["task"];
+                                await _todoService.DeleteAsync(task.Id, ct);
+                                var prompt = $"Рецепт '{task.Name}' удалён.";
+                                await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
+                            }
+                            catch (Exception e)
+                            {
+                                FileLogger.LogError(e, "DeleteTaskScenario");
+                                var prompt = "Не удалось удалить рецепт. Подробности записаны в лог.";
+                                await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
+                            }
                         }
 
                         return ScenarioResult.Completed;

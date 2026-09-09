@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using CookingBot.Core.Entities;
 using CookingBot.Core.Services;
+using CookingBot.Helpers;
 using CookingBot.TelegramBot.Dto;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -18,7 +19,8 @@ namespace CookingBot.TelegramBot.Scenarios
         private readonly IToDoListService _todoListService;
         private readonly IToDoService _todoService;
 
-        public DeleteListScenario(IUserService userService, IToDoListService todoListService, IToDoService toDoService)
+        public DeleteListScenario(IUserService userService, IToDoListService todoListService, 
+            IToDoService toDoService)
         {
             _userService = userService;
             _todoListService = todoListService;
@@ -33,7 +35,8 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
-        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, ScenarioContext context, Update update, CancellationToken ct)
+        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, 
+            ScenarioContext context, Update update, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             var chat = update.Message?.Chat ?? update.CallbackQuery?.Message?.Chat;
@@ -44,10 +47,12 @@ namespace CookingBot.TelegramBot.Scenarios
             {
                 case null:
                     {
+                        var prompt = string.Empty;
                         var user = await _userService.GetUserAsync(context.UserId, ct);
                         if (user == null)
                         {
-                            await telegramBotClient.SendMessage(chat, "Вы не зарегистрированы. Выберите \"Старт\"", cancellationToken: ct);
+                            prompt = "Вы не зарегистрированы. Выберите \"Старт\"";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Completed;
                         }
                         context.Data["user"] = user;
@@ -55,18 +60,22 @@ namespace CookingBot.TelegramBot.Scenarios
                         List<ToDoList> lists = (List<ToDoList>)await _todoListService.GetUserListsAsync(user.UserId, ct);
                         if (lists.Count == 0)
                         {
-                            await telegramBotClient.SendMessage(chat, "У вас нет списков для удаления", cancellationToken: ct);
+                            prompt = "У вас нет списков для удаления";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Completed;
 
                         }
 
-                        await telegramBotClient.SendMessage(chat, "Выберите список для удаления:", replyMarkup: Keyboards.BuildKeyboardDeleteListForUser(lists), cancellationToken: ct);
+                        prompt = "Выберите список для удаления:";
+                        await telegramBotClient.SendMessage(chat, prompt, 
+                            replyMarkup: Keyboards.BuildKeyboardDeleteListForUser(lists), cancellationToken: ct);
 
                         context.CurrentStep = "Approve";
                         return ScenarioResult.Transition;
                     }
                 case "Approve":
                     {
+                        var prompt = string.Empty;
                         var data = update.CallbackQuery?.Data;
                         if (string.IsNullOrEmpty(data))
                             return ScenarioResult.Completed;
@@ -74,7 +83,8 @@ namespace CookingBot.TelegramBot.Scenarios
                         var dto = ToDoListCallbackDto.FromString(data);
                         if (dto.ToDoListId == null)
                         {
-                            await telegramBotClient.SendMessage(chat, "Не удалось определить список.", cancellationToken: ct);
+                            prompt = "Не удалось определить список.";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Completed;
                         }
 
@@ -87,7 +97,9 @@ namespace CookingBot.TelegramBot.Scenarios
 
                         context.Data["list"] = list;
 
-                        await telegramBotClient.SendMessage(chat, $"Подтвердите удаление списка '{list.Name}' и всех его рецептов:", replyMarkup: Keyboards.BuildKeyboardYesNo(), cancellationToken: ct);
+                        prompt = $"Подтвердите удаление списка '{list.Name}' и всех его рецептов:";
+                        await telegramBotClient.SendMessage(chat, prompt, 
+                            replyMarkup: Keyboards.BuildKeyboardYesNo(), cancellationToken: ct);
                         context.CurrentStep = "Delete";
                         return ScenarioResult.Transition;
                     }
@@ -103,17 +115,28 @@ namespace CookingBot.TelegramBot.Scenarios
 
                         if (answer == "yes")
                         {
-                            var list = (ToDoList)context.Data["list"];
-                            var user = (ToDoUser)context.Data["user"];
-
-                            var items = await _todoService.GetByUserIdAndList(user.UserId, list.Id, ct);
-                            foreach (var item in items)
+                            try
                             {
-                                await _todoService.DeleteAsync(item.Id, ct);
-                            }
+                                var list = (ToDoList)context.Data["list"];
+                                var user = (ToDoUser)context.Data["user"];
 
-                            await _todoListService.DeleteAsync(list.Id, ct);
-                            await telegramBotClient.SendMessage(chat, $"Список '{list.Name}' удалён.", cancellationToken: ct);
+                                var items = await _todoService.GetByUserIdAndList(user.UserId, list.Id, ct);
+                                foreach (var item in items)
+                                {
+                                    await _todoService.DeleteAsync(item.Id, ct);
+                                }
+
+                                await _todoListService.DeleteAsync(list.Id, ct);
+                                var prompt = $"Список '{list.Name}' удалён.";
+                                await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
+                            }
+                            catch (Exception e) 
+                            {
+                                FileLogger.LogError(e, "DeleteListScenario");
+                                var prompt = "Не удалось удалить список. Подробности записаны в лог.";
+                                await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
+
+                            }
                         }
 
                         return ScenarioResult.Completed;
