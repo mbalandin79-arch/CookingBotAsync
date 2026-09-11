@@ -13,6 +13,7 @@ namespace CookingBot.Core.Services
     {
         private readonly IToDoListRepository _toDoListRepository;
         private int _maxListsPerUser = 10;
+        public const int MaxListNameLength = 30;
 
         public ToDoListService(IToDoListRepository toDoListRepository)
         {
@@ -21,9 +22,9 @@ namespace CookingBot.Core.Services
 
         private void CheckLengthLimits(string name)
         {
-            if (name.Length > 10)
+            if (name.Length > MaxListNameLength)
             {
-                throw new TaskLengthLimitException(name.Length, 10);
+                throw new TaskLengthLimitException(name.Length, MaxListNameLength);
             }
         }
 

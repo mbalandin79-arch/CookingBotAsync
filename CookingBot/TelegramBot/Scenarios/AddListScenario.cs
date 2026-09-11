@@ -44,14 +44,17 @@ namespace CookingBot.TelegramBot.Scenarios
             {
                 case null:
                     {
+                        var prompt = string.Empty;
                         var user = await _userService.GetUserAsync(context.UserId, ct);
                         if (user == null)
                         {
-                            await telegramBotClient.SendMessage(chat, "Вы не зарегистрированы. Выберите \"Старт\"", cancellationToken: ct);
+                            prompt = "Вы не зарегистрированы. Выберите \"Старт\"";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Completed;
                         }
                         context.Data["user"] = user;
-                        await telegramBotClient.SendMessage(chat, "Введите название списка (не более 10 символов):", cancellationToken: ct);
+                        prompt = $"Введите название списка (не более {ToDoListService.MaxListNameLength} символов):";
+                        await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                         context.CurrentStep = "Name";
                         return ScenarioResult.Transition;
                     }
@@ -65,6 +68,14 @@ namespace CookingBot.TelegramBot.Scenarios
                         }
 
                         name = name.Trim();
+                        if (name.Length > ToDoListService.MaxListNameLength)
+                        {
+                            var str = new StringBuilder();
+                            str.Append($"Длина названия ({name.Length}) превышает разрешенный максимум {ToDoListService.MaxListNameLength} символов.");
+                            str.AppendLine(" Введите корректное название:");
+                            await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
+                            return ScenarioResult.Transition;
+                        }
 
                         var toDoUser = (ToDoUser)context.Data["user"];
 

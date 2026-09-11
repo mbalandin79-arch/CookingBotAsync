@@ -72,6 +72,15 @@ namespace CookingBot.TelegramBot.Scenarios
                             await telegramBotClient.SendMessage(chat, "Название не может быть пустым. Введите название рецепта:", cancellationToken: ct);
                             return ScenarioResult.Transition;
                         }
+                        name = name.Trim();
+                        if(name.Length > _todoService.MaxRecipeNameLength)
+                        {
+                            var str = new StringBuilder();
+                            str.Append($"Длина названия ({name.Length}) превышает разрешенный максимум {_todoService.MaxRecipeNameLength} символов.");
+                            str.AppendLine(" Введите корректное название:");
+                            await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
+                            return ScenarioResult.Transition;
+                        }
                         context.Data["name"] = name;
                         await telegramBotClient.SendMessage(chat, "Введите дедлайн (формат dd.MM.yyyy):", cancellationToken: ct);
                         context.CurrentStep = "Deadline";
@@ -117,7 +126,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         var user = (ToDoUser)context.Data["user"];
                         var lists = await _todoListService.GetUserListsAsync(user.UserId, ct);
 
-                        await telegramBotClient.SendMessage(chat, "Выберите подкатегорию:", replyMarkup: Keyboards.BuildListsKeyboard(lists), cancellationToken: ct);
+                        await telegramBotClient.SendMessage(chat, "Выберите подкатегорию (список рецептов) или создайте новую:", replyMarkup: Keyboards.BuildListsKeyboard(lists), cancellationToken: ct);
                         context.CurrentStep = "SubCategory";
                         return ScenarioResult.Transition;
                     }
@@ -133,7 +142,8 @@ namespace CookingBot.TelegramBot.Scenarios
 
                         if (data == "newlist")
                         {
-                            await telegramBotClient.SendMessage(chat, "Введите название подкатегории (не более 10 символов):", cancellationToken: ct);
+                            var promp = $"Введите название подкатегории (не более {ToDoListService.MaxListNameLength} символов):";
+                            await telegramBotClient.SendMessage(chat, promp, cancellationToken: ct);
                             context.CurrentStep = "NewListName";
                             return ScenarioResult.Transition;
                         }
@@ -146,7 +156,11 @@ namespace CookingBot.TelegramBot.Scenarios
                         }
                         context.Data["list"] = list!;
 
-                        await telegramBotClient.SendMessage(chat, "Введите ингредиенты через запятую. По ним будет доступен поиск рецепта.\nПример: мука, сахар, яйца\nХотя бы один — обязательно.", cancellationToken: ct);
+                        var str = new StringBuilder();
+                        str.AppendLine("Введите ингредиенты через запятую. По ним будет доступен поиск рецепта.");
+                        str.AppendLine("Пример: мука, сахар, яйца");
+                        str.AppendLine("Хотя бы один — обязательно.");
+                        await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
                         context.CurrentStep = "Ingredients";
                         return ScenarioResult.Transition;
                     }
@@ -156,34 +170,51 @@ namespace CookingBot.TelegramBot.Scenarios
                         var name = update.Message?.Text;
                         if (string.IsNullOrWhiteSpace(name))
                         {
-                            await telegramBotClient.SendMessage(chat, "Название не может быть пустым. Введите название подкатегории:", cancellationToken: ct);
+                            var prompt = "Название не может быть пустым. Введите название подкатегории:";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Transition;
                         }
 
                         name = name.Trim();
+                        if(name.Length > ToDoListService.MaxListNameLength)
+                        {
+                            var str = new StringBuilder();
+                            str.Append($"Длина названия ({name.Length}) превышает разрешенный максимум {ToDoListService.MaxListNameLength} символов.");
+                            str.AppendLine(" Введите корректное название:");
+                            await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
+                            return ScenarioResult.Transition;
+                        }
+
                         var toDoUser = (ToDoUser)context.Data["user"];
 
                         try
                         {
                             var list = await _todoListService.AddAsync(toDoUser, name, ct);
                             context.Data["list"] = list;
-                            await telegramBotClient.SendMessage(chat, "Введите ингредиенты через запятую. По ним будет доступен поиск рецепта.\nПример: мука, сахар, яйца\nХотя бы один — обязательно.", cancellationToken: ct);
+                            var str = new StringBuilder();
+                            str.AppendLine("Введите ингредиенты через запятую. По ним будет доступен поиск рецепта.");
+                            str.AppendLine("Пример: мука, сахар, яйца");
+                            str.AppendLine("Хотя бы один — обязательно.");
+                            await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
                             context.CurrentStep = "Ingredients";
                             return ScenarioResult.Transition;
                         }
                         catch (TaskLengthLimitException e)
                         {
-                            await telegramBotClient.SendMessage(chat, $"Длина названия '{e.TaskLength}' превышает максимум {e.TaskLengthLimit} символов", cancellationToken: ct);
+                            var prompt = $"Длина названия '{e.TaskLength}' превышает максимум {e.TaskLengthLimit} символов";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Transition;
                         }
                         catch (DuplicateTaskException e)
                         {
-                            await telegramBotClient.SendMessage(chat, $"Подкатегория '{e.Task}' уже существует. Введите другое название:", cancellationToken: ct);
+                            var prompt = $"Подкатегория '{e.Task}' уже существует. Введите другое название:";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Transition;
                         }
                         catch (ListCountLimitException e)
                         {
-                            await telegramBotClient.SendMessage(chat, $"Превышено максимальное количество подкатегорий равное {e.ListCountLimit}", cancellationToken: ct);
+                            var prompt = $"Превышено максимальное количество подкатегорий равное {e.ListCountLimit}";
+                            await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Completed;
                         }
                     }

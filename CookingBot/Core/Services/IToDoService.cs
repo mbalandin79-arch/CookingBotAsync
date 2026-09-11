@@ -9,6 +9,8 @@ namespace CookingBot.Core.Services
 {
     public interface IToDoService
     {
+        int MaxRecipeNameLength { get; }
+
         // Возвращает все задачи всех пользователей
         // По замыслу проекта, незарегистрированный пользователь должен иметь возможность только просмотра всех Рецептов (задач)
         Task<IReadOnlyList<ToDoItem>> GetAllTasksAsync(CancellationToken ct);

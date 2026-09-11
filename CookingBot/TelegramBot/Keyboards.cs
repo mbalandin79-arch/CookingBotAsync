@@ -39,6 +39,27 @@ namespace CookingBot.TelegramBot
             return commands.ToArray();
         }
 
+        public static InlineKeyboardMarkup BuildMainMenuKeyboard(ToDoUser? user)
+        {
+            var rows = new List<List<InlineKeyboardButton>>
+            {
+                new() { InlineKeyboardButton.WithCallbackData("Рецепты", "cook_menu") }
+            };
+
+            if (user != null)
+            {
+                rows.Add(new() { InlineKeyboardButton.WithCallbackData("Профиль", "profile_menu") });
+
+                if (user.State == ToDoUser.ToDoUserState.Admin ||
+                    user.State == ToDoUser.ToDoUserState.Moderator)
+                {
+                    rows.Add(new() { InlineKeyboardButton.WithCallbackData("Админ", "admin_menu") });
+                }
+            }
+
+            return new InlineKeyboardMarkup(rows);
+        }
+
         public static InlineKeyboardMarkup BuildProfileKeyboard(Guid userId)
         {
             return new InlineKeyboardMarkup(new[]
@@ -49,33 +70,42 @@ namespace CookingBot.TelegramBot
             });
         }
 
-        public static InlineKeyboardMarkup BuildAdminMenuKeyboard()
+        public static InlineKeyboardMarkup BuildAdminMenuKeyboard(ToDoUser.ToDoUserState state)
         {
-            return new InlineKeyboardMarkup(new[]
+            var rows = new List<List<InlineKeyboardButton>>();
+
+            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Список пользователей", "mod_listusers") });
+            rows.Add(new()
             {
-                new[] { InlineKeyboardButton.WithCallbackData("Список пользователей", "mod_listusers") },
-                new[]
-                {
-                    InlineKeyboardButton.WithCallbackData("Повысить до Member", "mod_promote_member"),
-                    InlineKeyboardButton.WithCallbackData("Понизить до Guest", "mod_demote_guest")
-                },
-                new[]
+                InlineKeyboardButton.WithCallbackData("Повысить до Member", "mod_promote_member"),
+                InlineKeyboardButton.WithCallbackData("Понизить до Guest", "mod_demote_guest")
+            });            
+
+            if (state == ToDoUser.ToDoUserState.Admin)
+            {
+                rows.Add(new()
                 {
                     InlineKeyboardButton.WithCallbackData("Повысить до Moderator", "admin_promote_mod"),
-                    InlineKeyboardButton.WithCallbackData("Повысить до Admin", "admin_promote_admin")
-                },
-                new[]
+                    InlineKeyboardButton.WithCallbackData("Понизить до Advanced", "admin_demote_advanced")
+                });
+                rows.Add(new()
                 {
-                    InlineKeyboardButton.WithCallbackData("Понизить до Advanced", "admin_demote_advanced"),
+                    InlineKeyboardButton.WithCallbackData("Повысить до Admin", "admin_promote_admin"),
                     InlineKeyboardButton.WithCallbackData("Понизить до Moderator", "admin_demote_mod")
-                },
-                new[] 
-                { 
-                    InlineKeyboardButton.WithCallbackData("Лимиты", "admin_limits"),
-                    InlineKeyboardButton.WithCallbackData("Очистка журнала активности", "admin_cleanup_locks")
-                },
-                new[] { InlineKeyboardButton.WithCallbackData("Назад", "mainmenu") }
+                });
+                rows.Add(new()
+                {
+                    InlineKeyboardButton.WithCallbackData("Лимиты", "admin_limits")
+                });
+            }
+
+            rows.Add(new()
+            {
+                InlineKeyboardButton.WithCallbackData("Очистка журнала активности", "admin_cleanup_locks")
             });
+            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Назад", "mainmenu") });
+
+            return new InlineKeyboardMarkup(rows);
         }
 
         public static ReplyKeyboardMarkup BuildCancelKeyboard()
@@ -83,16 +113,6 @@ namespace CookingBot.TelegramBot
             return new ReplyKeyboardMarkup(new[]
             {
                 new KeyboardButton[] { new KeyboardButton("Отмена") }
-            })
-            { ResizeKeyboard = true };
-        }
-
-        public static ReplyKeyboardMarkup BuildMainReplyKeyboard()
-        {
-            return new ReplyKeyboardMarkup(new[]
-            {
-                new KeyboardButton[] { new KeyboardButton("/addtask"), new KeyboardButton("/show") },
-                new KeyboardButton[] { new KeyboardButton("/report"), new KeyboardButton("/help") }
             })
             { ResizeKeyboard = true };
         }
@@ -158,7 +178,7 @@ namespace CookingBot.TelegramBot
                 new[] { InlineKeyboardButton.WithCallbackData("Нет", "no") }
             });
         }
-        
+
         public static InlineKeyboardMarkup BuildShowListsKeyboard(IReadOnlyList<ToDoList> lists)
         {
             var rows = new List<List<InlineKeyboardButton>>();
@@ -171,7 +191,6 @@ namespace CookingBot.TelegramBot
                     ToDoListId = null
                 }.ToString())
             });
-
 
             foreach (var list in lists)
             {
@@ -187,8 +206,8 @@ namespace CookingBot.TelegramBot
 
             rows.Add(new()
             {
-                InlineKeyboardButton.WithCallbackData("Добавить список", "/addlist"),
-                InlineKeyboardButton.WithCallbackData("Удалить список", "/deletelist")
+                InlineKeyboardButton.WithCallbackData("Добавить список", "addlist"),
+                InlineKeyboardButton.WithCallbackData("Удалить список", "deletelist")
             });
 
             return new InlineKeyboardMarkup(rows);
@@ -251,8 +270,7 @@ namespace CookingBot.TelegramBot
             if (isRegistered)
             {
                 rows.Add(new() {
-                    InlineKeyboardButton.WithCallbackData("Добавить рецепт", "add_recipe"),
-                    InlineKeyboardButton.WithCallbackData("Удалить рецепт", "del_recipe")
+                    InlineKeyboardButton.WithCallbackData("Добавить рецепт", "add_recipe")
                 });
                 rows.Add(new() {
                     InlineKeyboardButton.WithCallbackData("Найти мой рецепт", "findmy_recipe") ,
@@ -276,7 +294,7 @@ namespace CookingBot.TelegramBot
                 new[] { InlineKeyboardButton.WithCallbackData("Назад", "mainmenu") }
             });
         }
-                
+
         public static InlineKeyboardMarkup BuildRegistrationKeyboard()
         {
             return new InlineKeyboardMarkup(new[]

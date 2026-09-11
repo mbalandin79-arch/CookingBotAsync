@@ -18,6 +18,8 @@ namespace CookingBot.Core.Services
         private int _maxRecipesPerList = 50;
         private readonly IToDoRepository _toDoRepository;
 
+        public int MaxRecipeNameLength => _maxLengthTask;
+
         public ToDoService(IToDoRepository toDoRepository)
         {
             _toDoRepository = toDoRepository;
