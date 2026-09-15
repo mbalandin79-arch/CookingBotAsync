@@ -23,6 +23,7 @@ namespace CookingBot.TelegramBot
                 new BotCommand { Command = "/cook", Description = "Рецепты" },
                 new BotCommand { Command = "/help", Description = "Помощь" },
                 new BotCommand { Command = "/info", Description = "О боте"},
+                new BotCommand { Command = "/cancel", Description = "Отменить текущий сценарий"},
                 new BotCommand { Command = "/exit", Description = "Завершить сессию" },
             };
 
@@ -151,21 +152,14 @@ namespace CookingBot.TelegramBot
 
         public static InlineKeyboardMarkup BuildKeyboardDeleteListForUser(List<ToDoList> lists)
         {
-            var rows = new List<List<InlineKeyboardButton>>();
-
-            foreach (var list in lists)
-            {
-                var callbackData = new ToDoListCallbackDto
+            var rows = lists.Select(list => new List<InlineKeyboardButton> 
+            { 
+                InlineKeyboardButton.WithCallbackData(list.Name, new ToDoListCallbackDto
                 {
                     Action = "deletelist",
                     ToDoListId = list.Id
-                }.ToString();
-
-                rows.Add(new()
-                {
-                    InlineKeyboardButton.WithCallbackData(list.Name, callbackData)
-                });
-            }
+                }.ToString())
+            }).ToList();
 
             return new InlineKeyboardMarkup(rows);
         }
@@ -181,28 +175,25 @@ namespace CookingBot.TelegramBot
 
         public static InlineKeyboardMarkup BuildShowListsKeyboard(IReadOnlyList<ToDoList> lists)
         {
-            var rows = new List<List<InlineKeyboardButton>>();
-
-            rows.Add(new()
+            var rows = lists.Select(list => new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData("Все рецепты", new ToDoListCallbackDto
+                InlineKeyboardButton.WithCallbackData(list.Name, new PagedListCallbackDto
                 {
                     Action = "show",
-                    ToDoListId = null
+                    ToDoListId = list.Id,
+                    Page = 0
+                }.ToString())
+            }).ToList();
+
+            rows.Insert(0, new()
+            {
+                InlineKeyboardButton.WithCallbackData("Все рецепты", new PagedListCallbackDto
+                {
+                    Action = "show",
+                    ToDoListId = null,
+                    Page = 0
                 }.ToString())
             });
-
-            foreach (var list in lists)
-            {
-                rows.Add(new()
-                {
-                    InlineKeyboardButton.WithCallbackData(list.Name, new ToDoListCallbackDto
-                    {
-                        Action = "show",
-                        ToDoListId = list.Id
-                    }.ToString())
-                });
-            }
 
             rows.Add(new()
             {
@@ -215,29 +206,26 @@ namespace CookingBot.TelegramBot
 
         public static InlineKeyboardMarkup BuildListsKeyboard(IReadOnlyList<ToDoList> lists)
         {
-            var rows = new List<List<InlineKeyboardButton>>();
-
-            rows.Add(new()
-            {
-                InlineKeyboardButton.WithCallbackData("Без подкатегории", new ToDoListCallbackDto
+            var rows = new List<List<InlineKeyboardButton>> 
+            { 
+                new()
                 {
-                    Action = "addtask",
-                    ToDoListId = null
-                }.ToString())
-            });
+                    InlineKeyboardButton.WithCallbackData("Без подкатегории", new ToDoListCallbackDto
+                    {
+                        Action = "addtask",
+                        ToDoListId = null
+                    }.ToString())
+                }
+            };
 
-
-            foreach (var list in lists)
+            rows.AddRange(lists.Select(list => new List<InlineKeyboardButton>
             {
-                rows.Add(new()
-                {
-                    InlineKeyboardButton.WithCallbackData(list.Name, new ToDoListCallbackDto
+                InlineKeyboardButton.WithCallbackData(list.Name, new ToDoListCallbackDto
                     {
                         Action = "addtask",
                         ToDoListId = list.Id
                     }.ToString())
-                });
-            }
+            }));
 
             rows.Add(new()
             {
@@ -340,64 +328,21 @@ namespace CookingBot.TelegramBot
             });
         }
 
-        public static InlineKeyboardMarkup BuildPagedButtons(IReadOnlyList<KeyValuePair<string, string>> callbackData, PagedListCallbackDto listDto, KeyValuePair<string, string>? extraButton = null)
+        public static InlineKeyboardMarkup BuildReadOnlyTaskKeyboard()
         {
-            int pageSize = 5;
-            int totalPages = (int)Math.Ceiling((double)callbackData.Count / pageSize);
-            if (totalPages == 0) totalPages = 1;
-
-            var pageItems = callbackData.GetBatchByNumber(pageSize, listDto.Page).ToList();
-
-            var rows = new List<List<InlineKeyboardButton>>();
-
-            foreach (var item in pageItems)
+            return new InlineKeyboardMarkup(new[]
             {
-                rows.Add(new() { InlineKeyboardButton.WithCallbackData(item.Key, item.Value) });
-            }
-
-            var navRow = new List<InlineKeyboardButton>();
-            if (listDto.Page > 0)
-            {
-                navRow.Add(InlineKeyboardButton.WithCallbackData("⬅️", new PagedListCallbackDto
-                {
-                    Action = listDto.Action,
-                    ToDoListId = listDto.ToDoListId,
-                    Page = listDto.Page - 1
-                }.ToString()));
-            }
-            if (listDto.Page < totalPages - 1)
-            {
-                navRow.Add(InlineKeyboardButton.WithCallbackData("➡️", new PagedListCallbackDto
-                {
-                    Action = listDto.Action,
-                    ToDoListId = listDto.ToDoListId,
-                    Page = listDto.Page + 1
-                }.ToString()));
-            }
-            if (navRow.Count > 0)
-            {
-                rows.Add(navRow);
-            }
-
-            if (extraButton.HasValue)
-            {
-                rows.Add(new() { InlineKeyboardButton.WithCallbackData(extraButton.Value.Key, extraButton.Value.Value) });
-            }
-
-            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });
-
-            return new InlineKeyboardMarkup(rows);
+                new[] { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") }
+            });
         }
 
         public static InlineKeyboardMarkup BuildUserListKeyboard(IReadOnlyList<ToDoUser> users, string callbackPrefix)
         {
-            var rows = new List<List<InlineKeyboardButton>>();
-            foreach (var u in users)
+            var rows = users.Select(u => new List<InlineKeyboardButton>
             {
-                var buttonText = $"{u.TelegramUserName} ({u.State})";
-                var callbackData = $"{callbackPrefix}_{u.UserId}";
-                rows.Add(new() { InlineKeyboardButton.WithCallbackData(buttonText, callbackData) });
-            }
+                InlineKeyboardButton.WithCallbackData($"{u.TelegramUserName} ({u.State})", $"{callbackPrefix}_{u.UserId}")
+            }).ToList();
+
             rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });
             return new InlineKeyboardMarkup(rows);
         }
