@@ -30,7 +30,7 @@ namespace CookingBot.Core.Services
         Task<ToDoItem?> GetTaskAsync(Guid id, CancellationToken ct);
 
         // Добавляет задачи в общий Список и возвращает добавленную задачу
-        Task<ToDoItem> AddAsync(ToDoUser user, string name, DateTime deadline, ToDoItem.MainCategory category, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct);
+        Task<ToDoItem> AddAsync(ToDoUser user, string name, ToDoItem.MainCategory category, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct);
 
         // Изменяет состояние задачи в общем Списоке по id с Active на Completed 
         Task MarkCompletedAsync(Guid id, CancellationToken ct);

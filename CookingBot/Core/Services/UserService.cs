@@ -94,7 +94,14 @@ namespace CookingBot.Core.Services
             var existUser = await _userRepository.GetUserByTelegramUserIdAsync(telegramUserId, ct);
             if (existUser == null)
             {
-                var user = new ToDoUser(telegramUserId, telegramUserName);
+                var user = new ToDoUser
+                {
+                    UserId = Guid.NewGuid(),
+                    TelegramUserId = telegramUserId,
+                    TelegramUserName = telegramUserName,
+                    RegisteredAt = DateTime.UtcNow,
+                    State = ToDoUser.ToDoUserState.Guest
+                };
 
                 // если это первый пользователь, то он Админ
                 var allUsers = await _userRepository.GetAllUsersAsync(ct);

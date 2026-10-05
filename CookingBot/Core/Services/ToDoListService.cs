@@ -44,7 +44,7 @@ namespace CookingBot.Core.Services
                 throw new ArgumentException("Имя списка не может быть пустым.", nameof(name));
 
             name = name.Trim();
-                        
+
             CheckLengthLimits(name);
             await CheckDuplicateAsync(user.UserId, name, ct);
             var existingLists = await _toDoListRepository.GetByUserIdAsync(user.UserId, ct);
@@ -53,7 +53,13 @@ namespace CookingBot.Core.Services
                 throw new ListCountLimitException(_maxListsPerUser);
             }
 
-            var list = new ToDoList(user, name);
+            var list = new ToDoList
+            {
+                Id = Guid.NewGuid(),
+                User = user,
+                Name = name,
+                CreatedAt = DateTime.UtcNow
+            };
             await _toDoListRepository.AddAsync(list, ct);
             return list;
         }

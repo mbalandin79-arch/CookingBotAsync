@@ -30,54 +30,17 @@ namespace CookingBot.Core.Entities
             Sauce
         }
 
-        public Guid Id { get; }
-        public ToDoUser User { get; }
+        public Guid Id { get; set; }
+        public ToDoUser User { get; set; }
         public string Name { get; set; }
         public List<string> Steps { get; set; }
-        public DateTime CreatedAt { get; }
+        public DateTime CreatedAt { get; set; }
         public ToDoItemState State { get; set; }
         public DateTime? StateChangedAt { get; set; }
-
-        // TODO: В финальной версии убрать, если не найдём применение для рецепта.
-        // Оставлено по требованию ДЗ.
-        public DateTime Deadline { get; set; }
         public MainCategory Category { get; set; }
         public List<string> Ingredients { get; set; }
         public List<string> HiddenIngredients { get; set; }
-        public ToDoList? List { get; }
-
-
-        public ToDoItem(ToDoUser user, string name, DateTime deadline, MainCategory category, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? list)
-        {
-            User = user;
-            Name = name;
-            Id = Guid.NewGuid();
-            CreatedAt = DateTime.UtcNow; // универсальная дата и время на данный момент для всех часовых поясов
-            State = ToDoItemState.Active;
-            Deadline = deadline;
-            Category = category;
-            Ingredients = ingredients;
-            HiddenIngredients = hiddenIngredients;
-            Steps = steps;
-            List = list;
-        }
-
-        [JsonConstructor]
-        public ToDoItem(Guid id, ToDoUser user, string name, List<string> steps, DateTime createdAt, ToDoItemState state, DateTime? stateChangedAt, DateTime deadline, MainCategory category, List<string> ingredients, List<string> hiddenIngredients, ToDoList? list)
-        {
-            Id = id;
-            User = user;
-            Name = name;
-            Steps = steps;
-            CreatedAt = createdAt;
-            State = state;
-            StateChangedAt = stateChangedAt;
-            Deadline = deadline;
-            Category = category;
-            Ingredients = ingredients;
-            HiddenIngredients = hiddenIngredients;
-            List = list;
-        }
+        public ToDoList? List { get; set; }
 
         public static string GetCategoryName(MainCategory category)
         {

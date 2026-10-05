@@ -15,6 +15,8 @@ namespace CookingBot.TelegramBot
 {
     public static class Keyboards
     {
+        private static readonly int _pageSize = 5;
+
         public static BotCommand[] GetCommandsForUser(ToDoUser? user)
         {
             var commands = new List<BotCommand>()
@@ -344,6 +346,58 @@ namespace CookingBot.TelegramBot
             }).ToList();
 
             rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });
+            return new InlineKeyboardMarkup(rows);
+        }
+
+        /// <summary>
+        /// Строит постраничную inline-клавиатуру: кнопки-элементы (по 5 на страницу),
+        /// стрелки навигации, необязательная дополнительная кнопка и кнопка "Главное меню".
+        /// </summary>
+        /// <param name="callbackData">Список кнопок: текст -> callback-данные.</param>
+        /// <param name="listDto">Текущее состояние постраничного вывода (действие, список, страница).</param>
+        /// <param name="extraButton">Необязательная дополнительная кнопка внизу (например, "Посмотреть выполненные").</param>
+        public static InlineKeyboardMarkup BuildPagedButtons(IReadOnlyList<KeyValuePair<string, string>> callbackData,
+            PagedListCallbackDto listDto, KeyValuePair<string, string>? extraButton = null)
+        {
+            int totalPages = (int)Math.Ceiling((double)callbackData.Count / _pageSize);
+            if (totalPages == 0) totalPages = 1;
+
+            var rows = callbackData.GetBatchByNumber(_pageSize, listDto.Page).Select(item => new List<InlineKeyboardButton>
+            {
+                InlineKeyboardButton.WithCallbackData(item.Key, item.Value)
+            }).ToList();
+
+            var navRow = new List<InlineKeyboardButton>();
+            if (listDto.Page > 0)
+            {
+                navRow.Add(InlineKeyboardButton.WithCallbackData("⬅️", new PagedListCallbackDto
+                {
+                    Action = listDto.Action,
+                    ToDoListId = listDto.ToDoListId,
+                    Page = listDto.Page - 1
+                }.ToString()));
+            }
+            if (listDto.Page < totalPages - 1)
+            {
+                navRow.Add(InlineKeyboardButton.WithCallbackData("➡️", new PagedListCallbackDto
+                {
+                    Action = listDto.Action,
+                    ToDoListId = listDto.ToDoListId,
+                    Page = listDto.Page + 1
+                }.ToString()));
+            }
+            if (navRow.Count > 0)
+            {
+                rows.Add(navRow);
+            }
+
+            if (extraButton.HasValue)
+            {
+                rows.Add(new() { InlineKeyboardButton.WithCallbackData(extraButton.Value.Key, extraButton.Value.Value) });
+            }
+
+            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });
+
             return new InlineKeyboardMarkup(rows);
         }
     }

@@ -17,30 +17,11 @@ namespace CookingBot.Core.Entities
             Moderator,
             Admin
         }
-        public Guid UserId { get; }
+        public Guid UserId { get; set; }
         public string TelegramUserName { get; set; }
-        public DateTime RegisteredAt { get; }
-        public long TelegramUserId { get; }
+        public DateTime RegisteredAt { get; set; }
+        public long TelegramUserId { get; set; }
         public ToDoUserState State { get; set; }
-
-        public ToDoUser(long telegramUserId, string telegramUserName)
-        {
-            TelegramUserId = telegramUserId;
-            TelegramUserName = telegramUserName;
-            RegisteredAt = DateTime.UtcNow;
-            UserId = Guid.NewGuid();
-            State = ToDoUserState.Guest;
-        }
-
-        [JsonConstructor]
-        public ToDoUser(Guid userId, long telegramUserId, string telegramUserName, DateTime registeredAt, ToDoUserState state)
-        {
-            UserId = userId;
-            TelegramUserId = telegramUserId;
-            TelegramUserName = telegramUserName;
-            RegisteredAt = registeredAt;
-            State = state;
-        }
 
         public static string GetStateName(ToDoUserState state)
         {

@@ -82,29 +82,13 @@ namespace CookingBot.TelegramBot.Scenarios
                             return ScenarioResult.Transition;
                         }
                         context.Data["name"] = name;
-                        await telegramBotClient.SendMessage(chat, "Введите дедлайн (формат dd.MM.yyyy):", cancellationToken: ct);
-                        context.CurrentStep = "Deadline";
-                        return ScenarioResult.Transition;
-                    }
-
-                // Шаг 3: Категория (кнопки)
-                case "Deadline":
-                    {
-                        var deadlineText = update.Message?.Text;
-                        if (!DateTime.TryParseExact(deadlineText, "dd.MM.yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var deadline))
-                        {
-                            await telegramBotClient.SendMessage(chat, "Неверный формат даты. Введите дедлайн в формате dd.MM.yyyy:", cancellationToken: ct);
-                            return ScenarioResult.Transition;
-                        }
-
-                        context.Data["deadline"] = deadline;
 
                         await telegramBotClient.SendMessage(chat, "Выберите категорию:", replyMarkup: Keyboards.BuildCategoryKeyboard(), cancellationToken: ct);
                         context.CurrentStep = "Category";
                         return ScenarioResult.Transition;
                     }
 
-                // Шаг 4: Подкатегория
+                // Шаг 3: Подкатегория
                 case "Category":
                     {
                         var data = update.CallbackQuery?.Data;
@@ -131,7 +115,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         return ScenarioResult.Transition;
                     }
 
-                // Шаг 5: Ингредиенты
+                // Шаг 4: Ингредиенты
                 case "SubCategory":
                     {
                         var data = update.CallbackQuery?.Data;
@@ -219,7 +203,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         }
                     }
 
-                // Шаг 6: Скрытые ингредиенты
+                // Шаг 5: Скрытые ингредиенты
                 case "Ingredients":
                     {
                         var ingredientsText = update.Message?.Text;
@@ -247,7 +231,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         return ScenarioResult.Transition;
                     }
 
-                // Шаг 7: Шаги приготовления
+                // Шаг 6: Шаги приготовления
                 case "HiddenIngredients":
                     {
                         if (update.CallbackQuery?.Data == "cat_skip")
@@ -276,7 +260,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         return ScenarioResult.Transition;
                     }
 
-                // Шаг 7 (продолжение): Ввод шагов
+                // Шаг 6 (продолжение): Ввод шагов
                 case "Steps":
                     {
                         var steps = (List<string>)context.Data["steps"];
@@ -322,7 +306,6 @@ namespace CookingBot.TelegramBot.Scenarios
         {
             var toDoUser = (ToDoUser)context.Data["user"];
             var taskName = (string)context.Data["name"];
-            var deadline = (DateTime)context.Data["deadline"];
             var category = (ToDoItem.MainCategory)context.Data["category"];
             var ingredients = (List<string>)context.Data["ingredients"];
             var hiddenIngredients = (List<string>)context.Data["hiddenIngredients"];
@@ -331,14 +314,13 @@ namespace CookingBot.TelegramBot.Scenarios
 
             try
             {
-                var item = await _todoService.AddAsync(toDoUser, taskName, deadline, category, ingredients, hiddenIngredients, steps, list, ct);
+                var item = await _todoService.AddAsync(toDoUser, taskName, category, ingredients, hiddenIngredients, steps, list, ct);
 
                 var str = new StringBuilder();
                 str.AppendLine("Рецепт добавлен:");
                 str.AppendLine($" Id: {item.Id}");
                 str.AppendLine($" Name: {item.Name}");
                 str.AppendLine($" CreatedAt: {item.CreatedAt}");
-                str.AppendLine($" Deadline: {item.Deadline:dd.MM.yyyy}");
                 str.AppendLine($" Category: {ToDoItem.GetCategoryName(item.Category)}");
                 str.AppendLine($" Ingredients: {string.Join(", ", item.Ingredients)}");
                 str.AppendLine($" HiddenIngredients: {(item.HiddenIngredients.Count > 0 ? string.Join(", ", item.HiddenIngredients) : "-")}");

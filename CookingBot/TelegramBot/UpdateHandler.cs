@@ -72,7 +72,6 @@ namespace CookingBot.TelegramBot
         private readonly ConcurrentDictionary<long, string> _configLimitTargets = new();
         private readonly string _settingsPath;
         private readonly ConcurrentDictionary<long, SemaphoreSlim> _userLocks = new();
-        private static readonly int _pageSize = 5;
 
         public UpdateHandler(IUserService userService, IToDoService todoService,
             IToDoReportService toDoReportService, IScenarioContextRepository contextRepository,
@@ -86,52 +85,7 @@ namespace CookingBot.TelegramBot
             _toDoListService = toDoListService;
             _settingsPath = settingsPath;
         }
-
-        private static InlineKeyboardMarkup BuildPagedButtons(IReadOnlyList<KeyValuePair<string, string>> callbackData,
-            PagedListCallbackDto listDto, KeyValuePair<string, string>? extraButton = null)
-        {
-            int totalPages = (int)Math.Ceiling((double)callbackData.Count / _pageSize);
-            if (totalPages == 0) totalPages = 1;
-
-            var rows = callbackData.GetBatchByNumber(_pageSize, listDto.Page).Select(item => new List<InlineKeyboardButton>
-            {
-                InlineKeyboardButton.WithCallbackData(item.Key, item.Value)
-            }).ToList();
-
-            var navRow = new List<InlineKeyboardButton>();
-            if (listDto.Page > 0)
-            {
-                navRow.Add(InlineKeyboardButton.WithCallbackData("⬅️", new PagedListCallbackDto
-                {
-                    Action = listDto.Action,
-                    ToDoListId = listDto.ToDoListId,
-                    Page = listDto.Page - 1
-                }.ToString()));
-            }
-            if (listDto.Page < totalPages - 1)
-            {
-                navRow.Add(InlineKeyboardButton.WithCallbackData("➡️", new PagedListCallbackDto
-                {
-                    Action = listDto.Action,
-                    ToDoListId = listDto.ToDoListId,
-                    Page = listDto.Page + 1
-                }.ToString()));
-            }
-            if (navRow.Count > 0)
-            {
-                rows.Add(navRow);
-            }
-
-            if (extraButton.HasValue)
-            {
-                rows.Add(new() { InlineKeyboardButton.WithCallbackData(extraButton.Value.Key, extraButton.Value.Value) });
-            }
-
-            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });
-
-            return new InlineKeyboardMarkup(rows);
-        }
-
+                
         public Task HandleErrorAsync(ITelegramBotClient telegramBotClient, Exception exception,
             HandleErrorSource source, CancellationToken ct)
         {
@@ -820,7 +774,7 @@ namespace CookingBot.TelegramBot
             var buttons = BuildTaskButtons(completedItems);
 
             await EditMessageTextSafeAsync(telegramBotClient, chat, messageId, "Выполненные рецепты:",
-                BuildPagedButtons(buttons, dto), ct);
+                Keyboards.BuildPagedButtons(buttons, dto), ct);
         }
 
         private async Task HandleShowAllAsync(ITelegramBotClient telegramBotClient, string data,
@@ -837,7 +791,7 @@ namespace CookingBot.TelegramBot
 
             var buttons = BuildTaskButtons(listAllTasks);
             await EditMessageTextSafeAsync(telegramBotClient, chat, messageId, "Все рецепты:",
-                BuildPagedButtons(buttons, dto), ct);
+                Keyboards.BuildPagedButtons(buttons, dto), ct);
         }
 
         private async Task HandleShowListAsync(ITelegramBotClient telegramBotClient, string data,
@@ -866,7 +820,7 @@ namespace CookingBot.TelegramBot
             }.ToString());
 
             await EditMessageTextSafeAsync(telegramBotClient, chat, messageId, "Выберите рецепт:",
-                BuildPagedButtons(buttons, dto, extraButton), ct);
+                Keyboards.BuildPagedButtons(buttons, dto, extraButton), ct);
         }
 
         private async Task HandleTaskCallbackAsync(ITelegramBotClient telegramBotClient,
@@ -893,7 +847,6 @@ namespace CookingBot.TelegramBot
                         str.AppendLine($" Id: {task.Id}");
                         str.AppendLine($" Name: {task.Name}");
                         str.AppendLine($" CreatedAt: {task.CreatedAt}");
-                        str.AppendLine($" Deadline: {task.Deadline:dd.MM.yyyy}");
                         str.AppendLine($" Category: {ToDoItem.GetCategoryName(task.Category)}");
                         str.AppendLine($" SubCategory: {task.List?.Name ?? "-"}");
                         var ingredients = task.Ingredients != null && task.Ingredients.Count > 0 ?
@@ -945,7 +898,7 @@ namespace CookingBot.TelegramBot
                 var buttons = BuildTaskButtons(listAllTasks);
                 var dto = new PagedListCallbackDto { Action = "showall", Page = 0 };
                 await telegramBotClient.SendMessage(chat, "Все рецепты:",
-                    replyMarkup: BuildPagedButtons(buttons, dto), cancellationToken: ct);
+                    replyMarkup: Keyboards.BuildPagedButtons(buttons, dto), cancellationToken: ct);
             }
             else
             {
