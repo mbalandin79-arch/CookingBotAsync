@@ -23,7 +23,9 @@ namespace CookingBot.Infrastructure.DataAccess
         {
             using var dbContext = _factory.CreateDataContext();
 
-            throw new NotImplementedException();
+            var model = ModelMapper.MapToModel(item);
+
+            await dbContext.InsertAsync(model, token: ct);
         }
 
         public async Task<int> CountActiveAsync(Guid userId, CancellationToken ct)
@@ -39,7 +41,7 @@ namespace CookingBot.Infrastructure.DataAccess
         {
             using var dbContext = _factory.CreateDataContext();
 
-            throw new NotImplementedException();
+            await dbContext.ToDoItems.DeleteAsync(d => d.Id == id, ct);
         }
 
         public async Task<bool> ExistsByNameAsync(Guid userId, string name, CancellationToken ct)
@@ -73,7 +75,7 @@ namespace CookingBot.Infrastructure.DataAccess
         {
             using var dbContext = _factory.CreateDataContext();
 
-            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.Category == category).OrderBy(o => o.CreatedAt).ToArrayAsync(ct);
+            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.Category == category).OrderBy(o => o.CreatedAt).ToListAsync(ct);
 
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
@@ -91,7 +93,7 @@ namespace CookingBot.Infrastructure.DataAccess
 
             var part = namePart.ToLower();
 
-            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.Name.ToLower().Contains(part)).OrderBy(o => o.CreatedAt).ToArrayAsync(ct);
+            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.Name.ToLower().Contains(part)).OrderBy(o => o.CreatedAt).ToListAsync(ct);
 
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
@@ -136,7 +138,9 @@ namespace CookingBot.Infrastructure.DataAccess
         {
             using var dbContext = _factory.CreateDataContext();
 
-            throw new NotImplementedException();
+            var model = ModelMapper.MapToModel(item);
+
+            await dbContext.UpdateAsync(model, token: ct);
         }
     }
 }

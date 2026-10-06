@@ -21,12 +21,18 @@ namespace CookingBot.Infrastructure.DataAccess
 
         public async Task AddAsync(ToDoList todoList, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            using var dbContext = _factory.CreateDataContext();
+
+            var model = ModelMapper.MapToModel(todoList);
+
+            await dbContext.InsertAsync(model, token: ct);
         }
 
         public async Task DeleteAsync(Guid id, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            using var dbContext = _factory.CreateDataContext();
+
+            await dbContext.ToDoLists.DeleteAsync(d => d.Id == id, ct);
         }
 
         public async Task<bool> ExistsByNameAsync(Guid userId, string name, CancellationToken ct)

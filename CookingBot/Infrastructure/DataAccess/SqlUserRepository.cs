@@ -7,8 +7,7 @@ using CookingBot.Core.DataAccess;
 using CookingBot.Core.Entities;
 using LinqToDB;
 using LinqToDB.Async;
-
-using CookingBot.Core.DataAccess;
+using CookingBot.Core.DataAccess.Models;
 
 namespace CookingBot.Infrastructure.DataAccess
 {
@@ -23,12 +22,18 @@ namespace CookingBot.Infrastructure.DataAccess
 
         public async Task AddAsync(ToDoUser user, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            using var dbContext = _factory.CreateDataContext();
+
+            var model = ModelMapper.MapToModel(user);
+
+            await dbContext.InsertAsync(model, token: ct);
         }
 
         public async Task DeleteAsync(Guid userId, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            using var dbContext = _factory.CreateDataContext();
+
+            await dbContext.ToDoUsers.DeleteAsync(d => d.UserId == userId, ct);
         }
 
         public async Task<IReadOnlyList<ToDoUser>> GetAllUsersAsync(CancellationToken ct)
@@ -60,7 +65,11 @@ namespace CookingBot.Infrastructure.DataAccess
 
         public async Task UpdateAsync(ToDoUser user, CancellationToken ct)
         {
-            throw new NotImplementedException();
+            using var dbContext = _factory.CreateDataContext();
+
+            var model = ModelMapper.MapToModel(user);
+
+            await dbContext.UpdateAsync(model, token: ct);
         }
     }
 }

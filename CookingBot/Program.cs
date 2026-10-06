@@ -42,11 +42,40 @@ namespace CookingBot
                 int maxTasks = configDoc.RootElement.TryGetProperty("MaxTasks", out var mt) ? mt.GetInt32() : 100;
                 int maxLengthTask = configDoc.RootElement.TryGetProperty("MaxLengthTask", out var mlt) ? mlt.GetInt32() : 100;
                 int maxListsPerUser = configDoc.RootElement.TryGetProperty("MaxListsPerUser", out var ml) ? ml.GetInt32() : 10;
-                int maxRecipesPerList = configDoc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;
+                int maxRecipesPerList = configDoc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;                
 
-                var userRepository = new FileUserRepository();
-                var toDoRepository = new FileToDoRepository("Todos");
-                var toDoListRepository = new FileToDoListRepository("ToDoLists");
+		// Строка подключения к PostgreSQL
+                string? connectionString = configDoc.RootElement.TryGetProperty("ConnectionString", out var csEl) ? csEl.GetString() : null;
+                if (string.IsNullOrEmpty(connectionString) || connectionString == "Put_Your_Connection_String_Here") 
+                {
+                    Console.WriteLine("Строка подключения к базе данных не задана в appsettings.json (ConnectionString).");
+                    return;
+                }
+
+                // Фабрика подключений к БД: создаётся ОДИН раз при старте бота.
+                // Репозитории получают её в конструктор и зовут CreateDataContext()
+                // на каждый свой метод (подключение живёт недолго, внутри using)
+                var dataContextFactory = new DataContextFactory(connectionString);
+
+                // Ранняя проверка доступности БД: без неё бот запустился бы,
+                // а ошибка выскочила бы только при первом обращении к репозиторию
+                try
+                {
+                    using var probeContext = dataContextFactory.CreateDataContext();
+                    _ = probeContext.ToDoUsers.Count();
+                    Console.WriteLine("Подключение к базе данных: OK");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Не удалось подключиться к базе данных: " + ex.Message);
+                    Console.WriteLine("Проверьте строку ConnectionString в appsettings.json (и запущен ли PostgreSQL).");
+                    return;
+                }
+
+                var userRepository = new SqlUserRepository(dataContextFactory);
+                var toDoRepository = new SqlToDoRepository(dataContextFactory);
+                var toDoListRepository = new SqlToDoListRepository(dataContextFactory);
+
                 var toDoService = new ToDoService(toDoRepository);
                 await toDoService.SetConfigurationAsync(maxTasks, maxLengthTask, maxRecipesPerList, cts.Token);
                 var toDoReportService = new ToDoReportService(toDoService);
@@ -165,6 +194,13 @@ namespace CookingBot
             if (!root.ContainsKey("BotToken"))
             {
                 root["BotToken"] = "Put_Your_Bot_Token_Here";
+                needsSave = true;
+            }
+
+            // ConnectionString - заглушка, если отсутствует
+            if (!root.ContainsKey("ConnectionString"))
+            {
+                root["ConnectionString"] = "Put_Your_Connection_String_Here";
                 needsSave = true;
             }
 
