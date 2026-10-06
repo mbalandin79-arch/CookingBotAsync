@@ -42,9 +42,9 @@ namespace CookingBot
                 int maxTasks = configDoc.RootElement.TryGetProperty("MaxTasks", out var mt) ? mt.GetInt32() : 100;
                 int maxLengthTask = configDoc.RootElement.TryGetProperty("MaxLengthTask", out var mlt) ? mlt.GetInt32() : 100;
                 int maxListsPerUser = configDoc.RootElement.TryGetProperty("MaxListsPerUser", out var ml) ? ml.GetInt32() : 10;
-                int maxRecipesPerList = configDoc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;                
+                int maxRecipesPerList = configDoc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;
 
-		// Строка подключения к PostgreSQL
+                // Строка подключения к PostgreSQL
                 string? connectionString = configDoc.RootElement.TryGetProperty("ConnectionString", out var csEl) ? csEl.GetString() : null;
                 if (string.IsNullOrEmpty(connectionString) || connectionString == "Put_Your_Connection_String_Here") 
                 {
