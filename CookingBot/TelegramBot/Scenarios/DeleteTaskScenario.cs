@@ -29,7 +29,7 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
-        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, 
+        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient,
             ScenarioContext context, Update update, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -52,7 +52,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         context.Data["task"] = task;
 
                         var prompt = $"Подтвердите удаление рецепта '{task.Name}':";
-                        await telegramBotClient.SendMessage(chat, prompt, replyMarkup: Keyboards.BuildKeyboardYesNo(), 
+                        await telegramBotClient.SendMessage(chat, prompt, replyMarkup: Keyboards.BuildKeyboardYesNo(),
                             cancellationToken: ct);
                         context.CurrentStep = "Delete";
                         return ScenarioResult.Transition;
@@ -82,9 +82,12 @@ namespace CookingBot.TelegramBot.Scenarios
                                 var prompt = "Не удалось удалить рецепт. Подробности записаны в лог.";
                                 await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             }
+                            return ScenarioResult.Completed;
                         }
 
-                        return ScenarioResult.Completed;
+                        // ответ не «да» и не «нет» (например, пользователь ввёл текст) — остаёмся в сценарии
+                        await telegramBotClient.SendMessage(chat, "Подтвердите удаление кнопками выше:", cancellationToken: ct);
+                        return ScenarioResult.Transition;
                     }
                 default:
                     return ScenarioResult.Completed;

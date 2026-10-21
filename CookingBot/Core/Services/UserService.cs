@@ -46,19 +46,6 @@ namespace CookingBot.Core.Services
             }
         }        
 
-        public async Task DeleteUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct)
-        {
-            ct.ThrowIfCancellationRequested();
-            if (telegramUserId <= 0)
-                return;
-
-            var user = await _userRepository.GetUserByTelegramUserIdAsync(telegramUserId, ct);
-            if (user != null)
-            {
-                await _userRepository.DeleteAsync(user.UserId, ct);
-            }
-        }
-
         public async Task DeleteUserByUserIdAsync(Guid userId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();

@@ -17,14 +17,11 @@ namespace CookingBot.TelegramBot.Scenarios
     {
         private readonly IUserService _userService;
         private readonly IToDoListService _todoListService;
-        private readonly IToDoService _todoService;
 
-        public DeleteListScenario(IUserService userService, IToDoListService todoListService, 
-            IToDoService toDoService)
+        public DeleteListScenario(IUserService userService, IToDoListService todoListService)
         {
             _userService = userService;
             _todoListService = todoListService;
-            _todoService = toDoService;
         }
 
         public bool CanHandle(ScenarioContext.ScenarioType scenario)
@@ -35,7 +32,7 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
-        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, 
+        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient,
             ScenarioContext context, Update update, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -55,7 +52,6 @@ namespace CookingBot.TelegramBot.Scenarios
                             await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             return ScenarioResult.Completed;
                         }
-                        context.Data["user"] = user;
 
                         List<ToDoList> lists = (List<ToDoList>)await _todoListService.GetUserListsAsync(user.UserId, ct);
                         if (lists.Count == 0)
@@ -67,7 +63,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         }
 
                         prompt = "Выберите список для удаления:";
-                        await telegramBotClient.SendMessage(chat, prompt, 
+                        await telegramBotClient.SendMessage(chat, prompt,
                             replyMarkup: Keyboards.BuildKeyboardDeleteListForUser(lists), cancellationToken: ct);
 
                         context.CurrentStep = "Approve";
@@ -78,7 +74,11 @@ namespace CookingBot.TelegramBot.Scenarios
                         var prompt = string.Empty;
                         var data = update.CallbackQuery?.Data;
                         if (string.IsNullOrEmpty(data))
+                        {
+                            // пользователь ввёл текст вместо нажатия кнопки — остаёмся в сценарии
+                            await telegramBotClient.SendMessage(chat, "Выберите список для удаления (кнопками выше):", cancellationToken: ct);
                             return ScenarioResult.Completed;
+                        }
 
                         var dto = ToDoListCallbackDto.FromString(data);
                         if (dto.ToDoListId == null)
@@ -98,7 +98,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         context.Data["list"] = list;
 
                         prompt = $"Подтвердите удаление списка '{list.Name}' и всех его рецептов:";
-                        await telegramBotClient.SendMessage(chat, prompt, 
+                        await telegramBotClient.SendMessage(chat, prompt,
                             replyMarkup: Keyboards.BuildKeyboardYesNo(), cancellationToken: ct);
                         context.CurrentStep = "Delete";
                         return ScenarioResult.Transition;
@@ -118,28 +118,25 @@ namespace CookingBot.TelegramBot.Scenarios
                             try
                             {
                                 var list = (ToDoList)context.Data["list"];
-                                var user = (ToDoUser)context.Data["user"];
 
-                                var items = await _todoService.GetByUserIdAndList(user.UserId, list.Id, ct);
-                                foreach (var item in items)
-                                {
-                                    await _todoService.DeleteAsync(item.Id, ct);
-                                }
-
+                                // Рецепты внутри списка удаляет сама БД:
+                                // FK_ToDoItem_ToDoList настроен на ON DELETE CASCADE
                                 await _todoListService.DeleteAsync(list.Id, ct);
                                 var prompt = $"Список '{list.Name}' удалён.";
                                 await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                             }
-                            catch (Exception e) 
+                            catch (Exception e)
                             {
                                 FileLogger.LogError(e, "DeleteListScenario");
                                 var prompt = "Не удалось удалить список. Подробности записаны в лог.";
                                 await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
-
                             }
+                            return ScenarioResult.Completed;
                         }
 
-                        return ScenarioResult.Completed;
+                        // ответ не «да» и не «нет» (например, пользователь ввёл текст) — остаёмся в сценарии
+                        await telegramBotClient.SendMessage(chat, "Подтвердите удаление кнопками выше:", cancellationToken: ct);
+                        return ScenarioResult.Transition;
                     }
                 default:
                     return ScenarioResult.Completed;

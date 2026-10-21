@@ -33,5 +33,11 @@ namespace CookingBot.TelegramBot.Scenarios
             _scenarioContext.TryRemove(userId, out var value);
             return Task.CompletedTask;
         }
+
+        public Task<IReadOnlyList<ScenarioContext>> GetContexts(CancellationToken ct)
+        {
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult<IReadOnlyList<ScenarioContext>>(_scenarioContext.Values.ToArray());
+        }
     }
 }

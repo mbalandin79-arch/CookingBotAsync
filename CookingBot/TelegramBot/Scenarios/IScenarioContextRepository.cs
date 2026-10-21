@@ -16,5 +16,7 @@ namespace CookingBot.TelegramBot.Scenarios
 
         // Сбрасывает (очищает) контекст пользователя
         Task ResetContext(long userId, CancellationToken ct);
+
+        Task<IReadOnlyList<ScenarioContext>> GetContexts(CancellationToken ct);
     }
 }

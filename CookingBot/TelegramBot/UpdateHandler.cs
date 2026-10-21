@@ -640,7 +640,7 @@ namespace CookingBot.TelegramBot
         private async Task ShowLimitsAsync(ITelegramBotClient telegramBotClient, Chat chat,
             CancellationToken ct)
         {
-            var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = ReadConfigLimits();
+            var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(_settingsPath);
             var str = new StringBuilder();
             str.AppendLine(" Текущие лимиты:");
             str.AppendLine($" MaxTasks: {maxTasks}");
@@ -649,17 +649,6 @@ namespace CookingBot.TelegramBot
             str.AppendLine($" MaxRecipesPerList: {maxRecipesPerList}");
             await telegramBotClient.SendMessage(chat, str.ToString(),
                 replyMarkup: Keyboards.BuildLimitsKeyboard(), cancellationToken: ct);
-        }
-
-        private (int maxTasks, int maxLengthTask, int maxListsPerUser, int maxRecipesPerList) ReadConfigLimits()
-        {
-            var json = File.ReadAllText(_settingsPath);
-            using var doc = JsonDocument.Parse(json);
-            int maxTasks = doc.RootElement.TryGetProperty("MaxTasks", out var mt) ? mt.GetInt32() : 100;
-            int maxLengthTask = doc.RootElement.TryGetProperty("MaxLengthTask", out var mlt) ? mlt.GetInt32() : 100;
-            int maxListsPerUser = doc.RootElement.TryGetProperty("MaxListsPerUser", out var ml) ? ml.GetInt32() : 10;
-            int maxRecipesPerList = doc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;
-            return (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList);
         }
 
         private async Task HandlePrefixedCallbackAsync(ITelegramBotClient telegramBotClient,
@@ -719,19 +708,11 @@ namespace CookingBot.TelegramBot
 
                         try
                         {
-                            var items = await _todoService.GetAllByUserIdAsync(confirmUserId, ct);
-                            foreach (var item in items)
-                            {
-                                await _todoService.DeleteAsync(item.Id, ct);
-                            }
-
-                            var lists = await _toDoListService.GetUserListsAsync(confirmUserId, ct);
-                            foreach (var list in lists)
-                            {
-                                await _toDoListService.DeleteAsync(list.Id, ct);
-                            }
-
+                            // Рецепты и списки пользователя удаляет сама БД:
+                            // внешние ключи FK_ToDoItem_ToDoUser и FK_ToDoList_ToDoUser
+                            // настроены на ON DELETE CASCADE
                             await _userService.DeleteUserByUserIdAsync(confirmUserId, ct);
+
                             var prompt = "Аккаунт и все ваши данные удалены.";
                             await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                         }
@@ -958,7 +939,7 @@ namespace CookingBot.TelegramBot
                 str.AppendLine($" TelegramUserId: {myUser.TelegramUserId}");
                 str.AppendLine($" TelegramUserName: {myUser.TelegramUserName}");
                 str.AppendLine($" Registered Date: {myUser.RegisteredAt}");
-                str.AppendLine($" State: {myUser.State}");
+                str.AppendLine($" State: {ToDoUser.GetStateName(myUser.State)}");
                 await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
                 await telegramBotClient.SendMessage(chat, "Управление профилем:",
                     replyMarkup: Keyboards.BuildProfileKeyboard(myUser.UserId), cancellationToken: ct);
@@ -1138,7 +1119,7 @@ namespace CookingBot.TelegramBot
             }
 
             var str = new StringBuilder("\n Список пользователей:\n");
-            str.AppendJoin("\n", users.Select((u, i) => $" {i + 1}. {u.TelegramUserName} | TelegramId: {u.TelegramUserId} | State: {u.State}"));
+            str.AppendJoin("\n", users.Select((u, i) => $" {i + 1}. {u.TelegramUserName} | TelegramId: {u.TelegramUserId} | State: {ToDoUser.GetStateName(u.State)}"));
             await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
         }
 
@@ -1205,7 +1186,7 @@ namespace CookingBot.TelegramBot
 
             var targetUser = await _userService.GetUserByUserIdAsync(targetUserId, ct);
             var userName = targetUser?.TelegramUserName ?? "Unknown";
-            var prompt = $" Пользователь \"{userName}\" теперь имеет статус: {targetState}";
+            var prompt = $" Пользователь \"{userName}\" теперь имеет статус: {ToDoUser.GetStateName(targetState)}";
             await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
 
 
@@ -1288,7 +1269,7 @@ namespace CookingBot.TelegramBot
             root[targetName] = value;
             await File.WriteAllTextAsync(_settingsPath, root.ToString(), ct);
 
-            var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = ReadConfigLimits();
+            var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(_settingsPath);
             await _todoService.SetConfigurationAsync(maxTasks, maxLengthTask, maxRecipesPerList, ct);
             await _toDoListService.SetConfigurationAsync(maxListsPerUser, ct);
 

@@ -342,7 +342,7 @@ namespace CookingBot.TelegramBot
         {
             var rows = users.Select(u => new List<InlineKeyboardButton>
             {
-                InlineKeyboardButton.WithCallbackData($"{u.TelegramUserName} ({u.State})", $"{callbackPrefix}_{u.UserId}")
+                InlineKeyboardButton.WithCallbackData($"{u.TelegramUserName} ({ToDoUser.GetStateName(u.State)})", $"{callbackPrefix}_{u.UserId}")
             }).ToList();
 
             rows.Add(new() { InlineKeyboardButton.WithCallbackData("Главное меню", "mainmenu") });

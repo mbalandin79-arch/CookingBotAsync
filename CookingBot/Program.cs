@@ -3,16 +3,18 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Net;
+using System.Text.Json.Nodes;
 using CookingBot.Core.Services;
 using CookingBot.Core.Exceptions;
 using CookingBot.Infrastructure.DataAccess;
 using CookingBot.TelegramBot;
 using CookingBot.TelegramBot.Scenarios;
+using CookingBot.Helpers;
+using CookingBot.BackgroundTasks;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using System.Text.Json.Nodes;
 
 namespace CookingBot
 {
@@ -36,16 +38,11 @@ namespace CookingBot
                 Console.WriteLine($"Токен: (задан, {botToken!.Length} символов)");
                 Console.WriteLine();
 
-                // Чтение лимитов из конфига
-                var configJson = await File.ReadAllTextAsync(settingsPath, cts.Token);
-                using var configDoc = JsonDocument.Parse(configJson);
-                int maxTasks = configDoc.RootElement.TryGetProperty("MaxTasks", out var mt) ? mt.GetInt32() : 100;
-                int maxLengthTask = configDoc.RootElement.TryGetProperty("MaxLengthTask", out var mlt) ? mlt.GetInt32() : 100;
-                int maxListsPerUser = configDoc.RootElement.TryGetProperty("MaxListsPerUser", out var ml) ? ml.GetInt32() : 10;
-                int maxRecipesPerList = configDoc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;
+                // Чтение лимитов и строки подключения из конфига (AppConfig — единственное место, знающее формат файла)
+                var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(settingsPath);
 
                 // Строка подключения к PostgreSQL
-                string? connectionString = configDoc.RootElement.TryGetProperty("ConnectionString", out var csEl) ? csEl.GetString() : null;
+                string? connectionString = AppConfig.ReadConnectionString(settingsPath);
                 if (string.IsNullOrEmpty(connectionString) || connectionString == "Put_Your_Connection_String_Here") 
                 {
                     Console.WriteLine("Строка подключения к базе данных не задана в appsettings.json (ConnectionString).");
@@ -87,7 +84,7 @@ namespace CookingBot
                 {
                     new AddTaskScenario(userService, toDoService, toDoListService),
                     new AddListScenario(userService, toDoListService),
-                    new DeleteListScenario(userService, toDoListService, toDoService),
+                    new DeleteListScenario(userService, toDoListService),
                     new DeleteTaskScenario(toDoService)
                 };
                 var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios, toDoListService, settingsPath);
@@ -126,10 +123,24 @@ namespace CookingBot
                     },
                     DropPendingUpdates = true
                 };
+
+                // Фоновые задачи: создаем раннер и регистрируем в нем задачи
+                using var runner = new BackgroundTaskRunner();
+                runner.AddTask(new ResetScenarioBackgroundTask(TimeSpan.FromHours(1), contextRepository, botClient));
+
+                // Запуск фоновых задач - до запуска приема сообщений ботом
+                // (StartTasks возвращает void: он только стартует задачи и сразу выходит)
+                runner.StartTasks(cts.Token);
+
                 botClient.StartReceiving(handler, receiverOptions, cts.Token);
 
                 Console.WriteLine("Бот запущен. Нажмите ESC для остановки");
                 while (Console.ReadKey(true).Key != ConsoleKey.Escape) ;
+
+                // Остановка фоновых задач - до отмены CancellationTokenSource
+                Console.WriteLine("Остановка фоновых задач...");
+                await runner.StopTasks(cts.Token);
+
                 cts.Cancel();
                 Console.WriteLine("Остановка бота...");
             }

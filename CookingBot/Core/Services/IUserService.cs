@@ -24,9 +24,6 @@ namespace CookingBot.Core.Services
         // Удаляет пользователя по по userId
         Task DeleteUserByUserIdAsync(Guid userId, CancellationToken ct);
 
-        // Удаляет пользователя по telegramUserId
-        Task DeleteUserByTelegramUserIdAsync(long telegramUserId, CancellationToken ct);        
-
         // Изменяет имя пользователя
         Task ChangeNameUser(Guid userId, string newName, CancellationToken ct);
 
