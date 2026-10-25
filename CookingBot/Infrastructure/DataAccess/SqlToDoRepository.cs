@@ -1,24 +1,32 @@
-﻿using CookingBot.Core.DataAccess;
-using CookingBot.Core.Entities;
-using LinqToDB;
-using LinqToDB.Async;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CookingBot.Core.DataAccess;
+using CookingBot.Core.Entities;
+using LinqToDB;
+using LinqToDB.Async;
 
 namespace CookingBot.Infrastructure.DataAccess
 {
+    /// <summary>
+    /// SQL-репозиторий рецептов (реализация IToDoRepository на linq2db).
+    /// Каждый метод открывает свой контекст БД (через фабрику) и освобождает
+    /// его по окончании (using). Чтения используют LoadWith для загрузки
+    /// ассоциаций User, List и List.User одним запросом.
+    /// </summary>
     internal class SqlToDoRepository : IToDoRepository
     {
         private readonly IDataContextFactory<ToDoDataContext> _factory;
 
+        /// <summary>Создаёт репозиторий рецептов.</summary>
+        /// <param name="factory">Фабрика контекстов БД.</param>
         public SqlToDoRepository(IDataContextFactory<ToDoDataContext> factory)
         {
             _factory = factory;
         }
 
+        /// <inheritdoc/>
         public async Task AddAsync(ToDoItem item, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -28,6 +36,7 @@ namespace CookingBot.Infrastructure.DataAccess
             await dbContext.InsertAsync(model, token: ct);
         }
 
+        /// <inheritdoc/>
         public async Task<int> CountActiveAsync(Guid userId, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -37,6 +46,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return answer;
         }
 
+        /// <inheritdoc/>
         public async Task DeleteAsync(Guid id, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -44,6 +54,7 @@ namespace CookingBot.Infrastructure.DataAccess
             await dbContext.ToDoItems.DeleteAsync(d => d.Id == id, ct);
         }
 
+        /// <inheritdoc/>
         public async Task<bool> ExistsByNameAsync(Guid userId, string name, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -53,6 +64,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return answer;
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> FindAllAsync(Func<ToDoItem, bool> predicate, CancellationToken ct)
         {
             var items = await GetAllAsync(ct);
@@ -62,6 +74,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return answer;
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> FindAsync(Guid userId, Func<ToDoItem, bool> predicate, CancellationToken ct)
         {
             var items = await GetAllByUserIdAsync(userId, ct);
@@ -71,6 +84,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return answer;
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> FindByCategoryAsync(ToDoItem.MainCategory category, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -80,6 +94,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> FindByIngredientAsync(string ingredient, CancellationToken ct)
         {
             var answer = await FindAllAsync(item => item.Ingredients != null && item.Ingredients.Any(a => a.Equals(ingredient, StringComparison.OrdinalIgnoreCase)), ct);
@@ -87,6 +102,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return answer;
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> FindByNameContainsAsync(string namePart, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -98,6 +114,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -107,6 +124,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> GetAllAsync(CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -116,6 +134,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
 
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -125,6 +144,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }
 
+        /// <inheritdoc/>
         public async Task<ToDoItem?> GetAsync(Guid id, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
@@ -134,6 +154,7 @@ namespace CookingBot.Infrastructure.DataAccess
             return model != null ? ModelMapper.MapFromModel(model) : null;
         }
 
+        /// <inheritdoc/>
         public async Task UpdateAsync(ToDoItem item, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();

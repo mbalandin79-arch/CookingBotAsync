@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,23 +6,34 @@ using CookingBot.Core.Entities;
 using CookingBot.Core.Services;
 using CookingBot.Helpers;
 using CookingBot.TelegramBot.Dto;
+using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 
 namespace CookingBot.TelegramBot.Scenarios
 {
+    /// <summary>
+    /// Сценарий удаления раздела кулинарной книги (три шага):
+    /// 1) выбор раздела (inline-кнопки; если разделов нет — сразу завершение);
+    /// 2) ("Approve") подтверждение удаления (Да/Нет);
+    /// 3) ("Delete") удаление через ToDoListService — рецепты раздела
+    /// удаляются каскадно самой БД (FK ON DELETE CASCADE).
+    /// </summary>
     public class DeleteListScenario : IScenario
     {
         private readonly IUserService _userService;
         private readonly IToDoListService _todoListService;
 
+        /// <summary>Создаёт сценарий удаления раздела.</summary>
+        /// <param name="userService">Сервис пользователей (проверка регистрации).</param>
+        /// <param name="todoListService">Сервис разделов (списки, удаление).</param>
         public DeleteListScenario(IUserService userService, IToDoListService todoListService)
         {
             _userService = userService;
             _todoListService = todoListService;
         }
 
+        /// <inheritdoc/>
         public bool CanHandle(ScenarioContext.ScenarioType scenario)
         {
             if (scenario == ScenarioType.DeleteList)
@@ -32,6 +42,7 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
+        /// <inheritdoc/>
         public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient,
             ScenarioContext context, Update update, CancellationToken ct)
         {

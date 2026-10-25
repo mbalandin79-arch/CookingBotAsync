@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -9,15 +8,23 @@ using CookingBot.Core.Entities;
 
 namespace CookingBot.Core.Services
 {
+    /// <summary>
+    /// Сервис статистики: сводка по рецептам пользователя.
+    /// Считает общее количество, активные и завершённые рецепты
+    /// на основе данных IToDoService.
+    /// </summary>
     internal class ToDoReportService : IToDoReportService
     {
         private readonly IToDoService _todoService;
 
+        /// <summary>Создаёт сервис статистики.</summary>
+        /// <param name="todoService">Сервис рецептов (источник данных).</param>
         public ToDoReportService(IToDoService todoService)
         {
             _todoService = todoService;
         }
 
+        /// <inheritdoc/>
         public async Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStatsAsync(Guid userId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();

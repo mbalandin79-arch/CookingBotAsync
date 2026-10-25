@@ -1,15 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace CookingBot.TelegramBot.Dto
 {
+    /// <summary>
+    /// Данные callback-запроса inline-кнопки: действие + идентификатор раздела.
+    /// Формат строки: "Action|ToDoListId" (см. CallbackDto).
+    /// </summary>
     public class ToDoListCallbackDto : CallbackDto
     {
+        /// <summary>Идентификатор раздела; null, если в данных кнопки его не было.</summary>
         public Guid? ToDoListId { get; set; }
 
+        /// <summary>Разбирает строку данных кнопки ("Action|ToDoListId") в DTO.</summary>
+        /// <param name="input">Строка данных кнопки.</param>
+        /// <returns>DTO с Action и идентификатором раздела (null при отсутствии).</returns>
         public static new ToDoListCallbackDto FromString(string input)
         {
             Guid? result = null;
@@ -26,6 +33,8 @@ namespace CookingBot.TelegramBot.Dto
             };
         }
 
+        /// <summary>Собирает DTO обратно в строку данных кнопки.</summary>
+        /// <returns>Строка данных кнопки ("Action|ToDoListId").</returns>
         public override string ToString()
         {
             return $"{base.ToString()}|{ToDoListId}";

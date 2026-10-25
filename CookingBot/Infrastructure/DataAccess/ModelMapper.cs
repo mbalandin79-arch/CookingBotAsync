@@ -1,10 +1,9 @@
-﻿using CookingBot.Core.DataAccess.Models;
-using CookingBot.Core.Entities;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CookingBot.Core.DataAccess.Models;
+using CookingBot.Core.Entities;
 using static CookingBot.Core.Entities.ToDoItem;
 using static CookingBot.Core.Entities.ToDoUser;
 
@@ -17,6 +16,9 @@ namespace CookingBot.Infrastructure.DataAccess
     /// </summary>
     internal static class ModelMapper
     {
+        /// <summary>Преобразует модель пользователя в Core-сущность.</summary>
+        /// <param name="model">Модель из БД.</param>
+        /// <returns>Core-сущность пользователя.</returns>
         public static ToDoUser MapFromModel(ToDoUserModel model)
         {
             return new ToDoUser
@@ -29,6 +31,9 @@ namespace CookingBot.Infrastructure.DataAccess
             };
         }
 
+        /// <summary>Преобразует Core-сущность пользователя в модель БД.</summary>
+        /// <param name="entity">Core-сущность.</param>
+        /// <returns>Модель для записи в БД.</returns>
         public static ToDoUserModel MapToModel(ToDoUser entity)
         {
             return new ToDoUserModel
@@ -41,6 +46,14 @@ namespace CookingBot.Infrastructure.DataAccess
             };
         }
 
+        /// <summary>
+        /// Преобразует модель рецепта в Core-сущность.
+        /// Массивы string[] (TEXT[]) превращаются в List&lt;string&gt;;
+        /// ассоциации User и List копируются рекурсивно, если они заполнены
+        /// (заполняются linq2db только при LoadWith).
+        /// </summary>
+        /// <param name="model">Модель из БД.</param>
+        /// <returns>Core-сущность рецепта.</returns>
         public static ToDoItem MapFromModel(ToDoItemModel model)
         {
             return new ToDoItem
@@ -59,6 +72,14 @@ namespace CookingBot.Infrastructure.DataAccess
             };
         }
 
+        /// <summary>
+        /// Преобразует Core-сущность рецепта в модель БД.
+        /// Контракт: сущность должна быть с заполненным User (UserId берётся из него);
+        /// ListId — null, если рецепт без раздела. Списки List&lt;string&gt;
+        /// превращаются в массивы string[] (пустые вместо null).
+        /// </summary>
+        /// <param name="entity">Core-сущность (с заполненным User).</param>
+        /// <returns>Модель для записи в БД.</returns>
         public static ToDoItemModel MapToModel(ToDoItem entity)
         {
             return new ToDoItemModel
@@ -79,6 +100,12 @@ namespace CookingBot.Infrastructure.DataAccess
             };
         }
 
+        /// <summary>
+        /// Преобразует модель раздела в Core-сущность.
+        /// Ассоциация User копируется рекурсивно, если заполнена (LoadWith).
+        /// </summary>
+        /// <param name="model">Модель из БД.</param>
+        /// <returns>Core-сущность раздела.</returns>
         public static ToDoList MapFromModel(ToDoListModel model)
         {
             return new ToDoList
@@ -90,6 +117,12 @@ namespace CookingBot.Infrastructure.DataAccess
             };
         }
 
+        /// <summary>
+        /// Преобразует Core-сущность раздела в модель БД.
+        /// Контракт: сущность должна быть с заполненным User (UserId берётся из него).
+        /// </summary>
+        /// <param name="entity">Core-сущность (с заполненным User).</param>
+        /// <returns>Модель для записи в БД.</returns>
         public static ToDoListModel MapToModel(ToDoList entity)
         {
             return new ToDoListModel
@@ -99,6 +132,26 @@ namespace CookingBot.Infrastructure.DataAccess
                 CreatedAt = entity.CreatedAt,
                 UserId = entity.User!.UserId,
                 User = entity.User != null ? MapToModel(entity.User) : null!
+            };
+        }
+
+        /// <summary>
+        /// Преобразует модель нотификации в Core-сущность.
+        /// Ассоциация User копируется рекурсивно, если заполнена (LoadWith).
+        /// </summary>
+        /// <param name="model">Модель из БД.</param>
+        /// <returns>Core-сущность нотификации.</returns>
+        public static Notification MapFromModel(NotificationModel model)
+        {
+            return new Notification
+            {
+                Id = model.Id,
+                User = model.User != null ? MapFromModel(model.User) : null!,
+                Type = model.Type,
+                Text = model.Text,
+                ScheduledAt = model.ScheduledAt,
+                IsNotified = model.IsNotified,
+                NotifiedAt = model.NotifiedAt
             };
         }
     }

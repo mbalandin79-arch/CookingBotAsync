@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -8,23 +7,33 @@ using CookingBot.Core.Entities;
 using CookingBot.Core.Exceptions;
 using CookingBot.Core.Services;
 using CookingBot.Helpers;
+using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 
 namespace CookingBot.TelegramBot.Scenarios
 {
+    /// <summary>
+    /// Сценарий добавления раздела кулинарной книги (два шага):
+    /// 1) проверка регистрации и запрос названия;
+    /// 2) ("Name") валидация, создание раздела через ToDoListService
+    /// и сообщение о результате (ошибки лимитов/дубликата — понятным текстом).
+    /// </summary>
     public class AddListScenario : IScenario
     {
         private readonly IUserService _userService;
         private readonly IToDoListService _todoListService;
 
+        /// <summary>Создаёт сценарий добавления раздела.</summary>
+        /// <param name="userService">Сервис пользователей (проверка регистрации).</param>
+        /// <param name="todoListService">Сервис разделов (создание раздела).</param>
         public AddListScenario(IUserService userService, IToDoListService todoListService)
         {
             _userService = userService;
             _todoListService = todoListService;
         }
 
+        /// <inheritdoc/>
         public bool CanHandle(ScenarioContext.ScenarioType scenario)
         {
             if (scenario == ScenarioType.AddList)
@@ -33,7 +42,9 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
-        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, ScenarioContext context, Update update, CancellationToken ct)
+        /// <inheritdoc/>
+        public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, 
+            ScenarioContext context, Update update, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             var chat = update.Message?.Chat ?? update.CallbackQuery?.Message?.Chat;

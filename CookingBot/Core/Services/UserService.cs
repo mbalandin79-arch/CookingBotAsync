@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,15 +8,22 @@ using CookingBot.Core.Entities;
 
 namespace CookingBot.Core.Services
 {
+    /// <summary>
+    /// Сервис пользователей: регистрация, смена имени и уровня доступа,
+    /// удаление. Работает с хранилищем через IUserRepository.
+    /// </summary>
     internal class UserService : IUserService
     {
         private readonly IUserRepository _userRepository;
 
+        /// <summary>Создаёт сервис пользователей.</summary>
+        /// <param name="userRepository">Репозиторий пользователей.</param>
         public UserService(IUserRepository userRepository)
         {
             _userRepository = userRepository;
         }
 
+        /// <inheritdoc/>
         public async Task ChangeNameUser(Guid userId, string newName, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -32,6 +38,7 @@ namespace CookingBot.Core.Services
             }
         }
 
+        /// <inheritdoc/>
         public async Task ChangeStateAsync(Guid userId, ToDoUser.ToDoUserState target, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -44,8 +51,9 @@ namespace CookingBot.Core.Services
                 user.State = target;
                 await _userRepository.UpdateAsync(user, ct);
             }
-        }        
+        }
 
+        /// <inheritdoc/>
         public async Task DeleteUserByUserIdAsync(Guid userId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -59,22 +67,26 @@ namespace CookingBot.Core.Services
             }
         }
 
-        public async Task<ToDoUser?> GetUserAsync(long telegramUserId, CancellationToken ct) // поиск Пользователя в БД и возврат всей записи пользователя либо NULL
+        /// <inheritdoc/>
+        public async Task<ToDoUser?> GetUserAsync(long telegramUserId, CancellationToken ct)
         {
             return await _userRepository.GetUserByTelegramUserIdAsync(telegramUserId, ct);
         }
 
-        public async Task<IReadOnlyList<ToDoUser>> GetAllUsersAsync(CancellationToken ct) // поиск Пользователя в БД и возврат всей записи пользователя либо NULL
+        /// <inheritdoc/>
+        public async Task<IReadOnlyList<ToDoUser>> GetAllUsersAsync(CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             return await _userRepository.GetAllUsersAsync(ct);
         }
 
+        /// <inheritdoc/>
         public async Task<ToDoUser?> GetUserByUserIdAsync(Guid userId, CancellationToken ct)
         {
             return await _userRepository.GetUserByUserIdAsync(userId, ct);
         }
 
+        /// <inheritdoc/>
         public async Task<ToDoUser> RegisterUserAsync(long telegramUserId, string telegramUserName, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -90,7 +102,6 @@ namespace CookingBot.Core.Services
                     State = ToDoUser.ToDoUserState.Guest
                 };
 
-                // если это первый пользователь, то он Админ
                 var allUsers = await _userRepository.GetAllUsersAsync(ct);
                 if (allUsers.Count == 0)
                     user.State = ToDoUser.ToDoUserState.Admin;
@@ -99,6 +110,6 @@ namespace CookingBot.Core.Services
                 return user;
             }
             return existUser;
-        }        
+        }
     }
 }

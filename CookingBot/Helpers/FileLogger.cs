@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,11 +6,23 @@ using System.Threading.Tasks;
 
 namespace CookingBot.Helpers
 {
+    /// <summary>
+    /// Простейший файловый логгер ошибок: пишет записи в файл
+    /// Logs\error_ГГГГ-ММ-ДД.log рядом с исполняемым файлом
+    /// (по одному файлу на день). Потокобезопасен (общий lock).
+    /// </summary>
     public static class FileLogger
     {
         private static readonly object _lock = new object();
         private static readonly string _logDirectory = Path.Combine(AppContext.BaseDirectory, "Logs");
 
+        /// <summary>
+        /// Записывает информацию об исключении в лог-файл текущего дня.
+        /// Ошибки самого логирования проглатываются — логирование не должно
+        /// ломать работу бота.
+        /// </summary>
+        /// <param name="ex">Исключение для записи.</param>
+        /// <param name="context">Необязательный контекст: где произошла ошибка.</param>
         public static void LogError(Exception ex, string? context = null)
         {
             try

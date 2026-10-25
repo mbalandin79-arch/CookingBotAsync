@@ -1,9 +1,8 @@
-﻿using CookingBot.Core.DataAccess;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CookingBot.Core.DataAccess;
 
 namespace CookingBot.Infrastructure.DataAccess
 {
@@ -16,11 +15,14 @@ namespace CookingBot.Infrastructure.DataAccess
     {
         private readonly string _connectionString;
 
+        /// <summary>Создаёт фабрику подключений.</summary>
+        /// <param name="connectionString">Строка подключения к PostgreSQL.</param>
         public DataContextFactory(string connectionString)
         {
             _connectionString = connectionString;
         }
 
+        /// <inheritdoc/>
         public ToDoDataContext CreateDataContext()
         {
             return new ToDoDataContext(_connectionString);

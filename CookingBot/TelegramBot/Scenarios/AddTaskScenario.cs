@@ -1,29 +1,36 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using CookingBot.Core.Entities;
 using CookingBot.Core.Exceptions;
 using CookingBot.Core.Services;
 using CookingBot.Helpers;
 using CookingBot.TelegramBot.Dto;
+using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 
 namespace CookingBot.TelegramBot.Scenarios
 {
+    /// <summary>
+    /// Сценарий добавления рецепта (многошаговый диалог):
+    /// название → категория (inline-кнопки) → подкатегория (или создание новой:
+    /// шаг "NewListName") → ингредиенты (по ним возможен поиск) → скрытые
+    /// ингредиенты (по ним поиска нет, можно пропустить) → шаги приготовления
+    /// (до 20, кнопка "Готово") → создание рецепта через ToDoService
+    /// (CreateRecipeAsync, ошибки лимитов/дубликата — понятным текстом).
+    /// </summary>
     public class AddTaskScenario : IScenario
     {
         private readonly IUserService _userService;
         private readonly IToDoService _todoService;
         private readonly IToDoListService _todoListService;
 
+        /// <summary>Создаёт сценарий добавления рецепта.</summary>
+        /// <param name="userService">Сервис пользователей (проверка регистрации).</param>
+        /// <param name="toDoService">Сервис рецептов (создание рецепта).</param>
+        /// <param name="toDoListService">Сервис разделов (список подкатегорий, создание новой).</param>
         public AddTaskScenario(IUserService userService, IToDoService toDoService, IToDoListService toDoListService)
         {
             _userService = userService;
@@ -31,6 +38,7 @@ namespace CookingBot.TelegramBot.Scenarios
             _todoListService = toDoListService;
         }
 
+        /// <inheritdoc/>
         public bool CanHandle(ScenarioType scenario)
         {
             if (scenario == ScenarioType.AddTask)
@@ -39,6 +47,7 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
+        /// <inheritdoc/>
         public async Task<ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient, ScenarioContext context, Update update, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
@@ -302,6 +311,16 @@ namespace CookingBot.TelegramBot.Scenarios
             }
         }
 
+        /// <summary>
+        /// Завершающий шаг сценария: собирает данные рецепта из context.Data,
+        /// создаёт рецепт через ToDoService.AddAsync и выводит карточку рецепта.
+        /// Ошибки лимитов/дубликата выводятся понятным текстом, сценарий завершается.
+        /// </summary>
+        /// <param name="telegramBotClient">Клиент Telegram для отправки сообщений.</param>
+        /// <param name="chat">Чат с пользователем.</param>
+        /// <param name="context">Контекст сценария (накопленные данные).</param>
+        /// <param name="ct">Токен отмены операции.</param>
+        /// <returns>Completed — сценарий завершён (успех или ошибка).</returns>
         private async Task<ScenarioResult> CreateRecipeAsync(ITelegramBotClient telegramBotClient, Chat chat, ScenarioContext context, CancellationToken ct)
         {
             var toDoUser = (ToDoUser)context.Data["user"];

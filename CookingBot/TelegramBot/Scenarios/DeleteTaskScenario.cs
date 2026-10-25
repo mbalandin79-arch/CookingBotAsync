@@ -1,26 +1,34 @@
-﻿using CookingBot.Core.Entities;
-using CookingBot.Core.Services;
-using CookingBot.Helpers;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CookingBot.Core.Entities;
+using CookingBot.Core.Services;
+using CookingBot.Helpers;
+using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 using Telegram.Bot;
 using Telegram.Bot.Types;
-using static CookingBot.TelegramBot.Scenarios.ScenarioContext;
 
 namespace CookingBot.TelegramBot.Scenarios
 {
+    /// <summary>
+    /// Сценарий удаления рецепта (два шага):
+    /// 1) подтверждение удаления (Да/Нет) — рецепт определяется по taskId,
+    /// который кладётся в context.Data ДО запуска сценария (в UpdateHandler);
+    /// 2) ("Delete") удаление через ToDoService.
+    /// </summary>
     public class DeleteTaskScenario : IScenario
     {
         private readonly IToDoService _todoService;
 
+        /// <summary>Создаёт сценарий удаления рецепта.</summary>
+        /// <param name="todoService">Сервис рецептов (чтение, удаление).</param>
         public DeleteTaskScenario(IToDoService todoService)
         {
             _todoService = todoService;
         }
 
+        /// <inheritdoc/>
         public bool CanHandle(ScenarioContext.ScenarioType scenario)
         {
             if (scenario == ScenarioType.DeleteTask)
@@ -29,6 +37,7 @@ namespace CookingBot.TelegramBot.Scenarios
             return false;
         }
 
+        /// <inheritdoc/>
         public async Task<ScenarioContext.ScenarioResult> HandleMessageAsync(ITelegramBotClient telegramBotClient,
             ScenarioContext context, Update update, CancellationToken ct)
         {

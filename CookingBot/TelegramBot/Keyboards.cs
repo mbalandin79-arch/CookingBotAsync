@@ -1,10 +1,5 @@
 ﻿using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Net.WebSockets;
 using CookingBot.Core.Entities;
 using CookingBot.Helpers;
 using CookingBot.TelegramBot.Dto;
@@ -13,10 +8,23 @@ using Telegram.Bot.Types;
 
 namespace CookingBot.TelegramBot
 {
+    /// <summary>
+    /// Построение всех клавиатур бота: BotCommand-меню, inline-клавиатуры
+    /// и ReplyKeyboardMarkup «Отмена» для сценариев.
+    /// Навигация бота строится ровно на трёх элементах (см. PLAN.md):
+    /// BotCommand-меню по роли, «Отмена» в сценариях, inline главное меню по роли.
+    /// </summary>
     public static class Keyboards
     {
         private static readonly int _pageSize = 5;
 
+        /// <summary>
+        /// Собирает BotCommand-меню по роли пользователя (для SetMyCommands):
+        /// базовые команды + «Мой профиль» для зарегистрированных
+        /// + «Администрирование» для модератора/администратора.
+        /// </summary>
+        /// <param name="user">Пользователь; null — меню для незарегистрированного.</param>
+        /// <returns>Список команд BotCommand-меню.</returns>
         public static BotCommand[] GetCommandsForUser(ToDoUser? user)
         {
             var commands = new List<BotCommand>()
@@ -42,6 +50,13 @@ namespace CookingBot.TelegramBot
             return commands.ToArray();
         }
 
+        /// <summary>
+        /// Собирает inline главное меню по роли пользователя:
+        /// «Рецепты» всем, «Профиль» зарегистрированным,
+        /// «Админ» модератору/администратору.
+        /// </summary>
+        /// <param name="user">Пользователь; null — меню для незарегистрированного.</param>
+        /// <returns>Клавиатура главного меню.</returns>
         public static InlineKeyboardMarkup BuildMainMenuKeyboard(ToDoUser? user)
         {
             var rows = new List<List<InlineKeyboardButton>>
@@ -63,6 +78,9 @@ namespace CookingBot.TelegramBot
             return new InlineKeyboardMarkup(rows);
         }
 
+        /// <summary>Собирает клавиатуру профиля: смена имени, удаление аккаунта, назад.</summary>
+        /// <param name="userId">Идентификатор пользователя (в callback-данных кнопок).</param>
+        /// <returns>Клавиатура профиля.</returns>
         public static InlineKeyboardMarkup BuildProfileKeyboard(Guid userId)
         {
             return new InlineKeyboardMarkup(new[]
@@ -73,6 +91,13 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру меню администрирования: список пользователей,
+        /// повышение/понижение ролей (для Moderator — только Member/Guest,
+        /// для Admin — вплоть до Admin), лимиты, очистка журнала активности.
+        /// </summary>
+        /// <param name="state">Роль вызывающего (определяет набор кнопок).</param>
+        /// <returns>Клавиатура меню администрирования.</returns>
         public static InlineKeyboardMarkup BuildAdminMenuKeyboard(ToDoUser.ToDoUserState state)
         {
             var rows = new List<List<InlineKeyboardButton>>();
@@ -111,6 +136,11 @@ namespace CookingBot.TelegramBot
             return new InlineKeyboardMarkup(rows);
         }
 
+        /// <summary>
+        /// Собирает ReplyKeyboardMarkup с кнопкой «Отмена» — показывается
+        /// на время выполнения сценариев (после завершения убирается).
+        /// </summary>
+        /// <returns>Клавиатура с кнопкой «Отмена».</returns>
         public static ReplyKeyboardMarkup BuildCancelKeyboard()
         {
             return new ReplyKeyboardMarkup(new[]
@@ -120,6 +150,11 @@ namespace CookingBot.TelegramBot
             { ResizeKeyboard = true };
         }
 
+        /// <summary>
+        /// Собирает клавиатуру выбора категории рецепта (шаг «Category»
+        /// сценария добавления рецепта); callback-данные — «cat_имяКатегории».
+        /// </summary>
+        /// <returns>Клавиатура категорий.</returns>
         public static InlineKeyboardMarkup BuildCategoryKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -136,6 +171,11 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру «Пропустить» (шаг скрытых ингредиентов,
+        /// callback — «cat_skip»).
+        /// </summary>
+        /// <returns>Клавиатура с кнопкой «Пропустить».</returns>
         public static InlineKeyboardMarkup BuildSkipKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -144,6 +184,11 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру «Готово» (завершение ввода шагов приготовления,
+        /// callback — «steps_done»).
+        /// </summary>
+        /// <returns>Клавиатура с кнопкой «Готово».</returns>
         public static InlineKeyboardMarkup BuildDoneKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -152,6 +197,12 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру выбора раздела для удаления (шаг «Approve»
+        /// сценария удаления раздела); callback — «deletelist|Id».
+        /// </summary>
+        /// <param name="lists">Разделы пользователя.</param>
+        /// <returns>Клавиатура с кнопками разделов.</returns>
         public static InlineKeyboardMarkup BuildKeyboardDeleteListForUser(List<ToDoList> lists)
         {
             var rows = lists.Select(list => new List<InlineKeyboardButton> 
@@ -166,6 +217,8 @@ namespace CookingBot.TelegramBot
             return new InlineKeyboardMarkup(rows);
         }
 
+        /// <summary>Собирает клавиатуру подтверждения Да/Нет (callback — «yes»/«no»).</summary>
+        /// <returns>Клавиатура Да/Нет.</returns>
         public static InlineKeyboardMarkup BuildKeyboardYesNo()
         {
             return new InlineKeyboardMarkup(new[]
@@ -175,6 +228,12 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру меню разделов: «Все рецепты», кнопки разделов
+        /// («show|Id|страница»), «Добавить список» / «Удалить список».
+        /// </summary>
+        /// <param name="lists">Разделы пользователя.</param>
+        /// <returns>Клавиатура меню разделов.</returns>
         public static InlineKeyboardMarkup BuildShowListsKeyboard(IReadOnlyList<ToDoList> lists)
         {
             var rows = lists.Select(list => new List<InlineKeyboardButton>
@@ -206,6 +265,13 @@ namespace CookingBot.TelegramBot
             return new InlineKeyboardMarkup(rows);
         }
 
+        /// <summary>
+        /// Собирает клавиатуру выбора подкатегории при добавлении рецепта
+        /// (шаг «SubCategory»): «Без подкатегории», разделы («addtask|Id»),
+        /// «Создать новую».
+        /// </summary>
+        /// <param name="lists">Разделы пользователя.</param>
+        /// <returns>Клавиатура выбора подкатегории.</returns>
         public static InlineKeyboardMarkup BuildListsKeyboard(IReadOnlyList<ToDoList> lists)
         {
             var rows = new List<List<InlineKeyboardButton>> 
@@ -237,6 +303,11 @@ namespace CookingBot.TelegramBot
             return new InlineKeyboardMarkup(rows);
         }
 
+        /// <summary>
+        /// Собирает клавиатуру выбора лимита для изменения
+        /// (callback — «config_имяЛимита»).
+        /// </summary>
+        /// <returns>Клавиатура лимитов.</returns>
         public static InlineKeyboardMarkup BuildLimitsKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -249,6 +320,12 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает меню раздела «Рецепты»: поиск и показ всех рецептов — всем;
+        /// добавление, «найти мой», «показать мои» — только зарегистрированным.
+        /// </summary>
+        /// <param name="isRegistered">Признак зарегистрированного пользователя.</param>
+        /// <returns>Клавиатура меню «Рецепты».</returns>
         public static InlineKeyboardMarkup BuildCookMenuKeyboard(bool isRegistered)
         {
             var rows = new List<List<InlineKeyboardButton>>
@@ -273,6 +350,12 @@ namespace CookingBot.TelegramBot
             return new InlineKeyboardMarkup(rows);
         }
 
+        /// <summary>
+        /// Собирает меню профиля: профиль, смена имени, статистика,
+        /// удаление аккаунта, назад (Id пользователя — в callback-данных).
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <returns>Клавиатура меню профиля.</returns>
         public static InlineKeyboardMarkup BuildProfileMenuKeyboard(Guid userId)
         {
             return new InlineKeyboardMarkup(new[]
@@ -285,6 +368,11 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру подтверждения регистрации Да/Нет
+        /// (callback — «reg_yes»/«reg_no»).
+        /// </summary>
+        /// <returns>Клавиатура Да/Нет.</returns>
         public static InlineKeyboardMarkup BuildRegistrationKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -294,6 +382,12 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру подтверждения удаления аккаунта
+        /// («Да, удалить» — «confirmdelete_Id», «Отмена»).
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <returns>Клавиатура подтверждения удаления.</returns>
         public static InlineKeyboardMarkup BuildDeleteAccountKeyboard(Guid userId)
         {
             return new InlineKeyboardMarkup(new[]
@@ -303,6 +397,12 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает inline-клавиатуру «Отмена» (перегрузка для inline-меню;
+        /// callback по умолчанию — «mainmenu»).
+        /// </summary>
+        /// <param name="callbackData">Callback-данные кнопки «Отмена».</param>
+        /// <returns>Клавиатура с кнопкой «Отмена».</returns>
         public static InlineKeyboardMarkup BuildCancelKeyboard(string callbackData = "mainmenu")
         {
             return new InlineKeyboardMarkup(new[]
@@ -311,6 +411,11 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру выбора имени при регистрации:
+        /// «Оставить по умолчанию» (reg_default), «Отмена» (reg_no).
+        /// </summary>
+        /// <returns>Клавиатура выбора имени.</returns>
         public static InlineKeyboardMarkup BuildRegistrationNameKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -320,6 +425,12 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру действий с рецептом (карточка рецепта):
+        /// «Выполнить» (completetask), «Удалить» (deletetask), назад.
+        /// </summary>
+        /// <param name="taskId">Идентификатор рецепта.</param>
+        /// <returns>Клавиатура действий с рецептом.</returns>
         public static InlineKeyboardMarkup BuildTaskActionKeyboard(Guid taskId)
         {
             return new InlineKeyboardMarkup(new[]
@@ -330,6 +441,11 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру только с кнопкой «Главное меню» —
+        /// карточка рецепта в режиме «только чтение» (для гостей).
+        /// </summary>
+        /// <returns>Клавиатура с кнопкой «Главное меню».</returns>
         public static InlineKeyboardMarkup BuildReadOnlyTaskKeyboard()
         {
             return new InlineKeyboardMarkup(new[]
@@ -338,6 +454,13 @@ namespace CookingBot.TelegramBot
             });
         }
 
+        /// <summary>
+        /// Собирает клавиатуру списка пользователей (администрирование):
+        /// кнопки «Имя (роль)» с callback «префикс_UserId» + «Главное меню».
+        /// </summary>
+        /// <param name="users">Пользователи для показа.</param>
+        /// <param name="callbackPrefix">Префикс callback-данных (какое действие выполняет кнопка).</param>
+        /// <returns>Клавиатура списка пользователей.</returns>
         public static InlineKeyboardMarkup BuildUserListKeyboard(IReadOnlyList<ToDoUser> users, string callbackPrefix)
         {
             var rows = users.Select(u => new List<InlineKeyboardButton>

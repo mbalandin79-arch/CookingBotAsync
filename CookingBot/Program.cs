@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Net;
@@ -18,8 +17,21 @@ using Telegram.Bot.Types.Enums;
 
 namespace CookingBot
 {
+    /// <summary>
+    /// Точка входа бота: конфигурация (appsettings.json), подключение к БД,
+    /// сборка зависимостей (репозитории → сервисы → сценарии → UpdateHandler),
+    /// запуск фоновых задач и приём обновлений Telegram. Остановка — ESC:
+    /// сначала останавливаются фоновые задачи, затем отменяется токен.
+    /// </summary>
     internal class Program
     {
+        /// <summary>
+        /// Основной метод: читает конфигурацию, проверяет токен и БД,
+        /// создаёт все компоненты бота, запускает фоновые задачи и приём
+        /// обновлений; ждёт ESC и корректно останавливает всё.
+        /// </summary>
+        /// <param name="args">Аргументы командной строки (не используются).</param>
+        /// <returns>Задача (Task) основного метода.</returns>
         static async Task Main(string[] args)
         {
             try
@@ -31,6 +43,7 @@ namespace CookingBot
                 if (errorMessage != null)
                 {
                     Console.WriteLine(errorMessage);
+                    WaitBeforeExit();
                     return;
                 }
 
@@ -41,11 +54,21 @@ namespace CookingBot
                 // Чтение лимитов и строки подключения из конфига (AppConfig — единственное место, знающее формат файла)
                 var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(settingsPath);
 
+                // Настройки фоновых задач (целые часы; файл конфига правит только Администратор)
+                var (resetScenarioRunIntervalHours, resetScenarioTimeoutHours) = AppConfig.ReadBackgroundTasks(settingsPath);
+                if (resetScenarioRunIntervalHours <= 0 || resetScenarioTimeoutHours <= 0)
+                {
+                    Console.WriteLine("Настройки фоновых задач в appsettings.json должны быть целыми положительными числами (ResetScenarioRunIntervalHours, ResetScenarioTimeoutHours).");
+                    WaitBeforeExit();
+                    return;
+                }
+
                 // Строка подключения к PostgreSQL
                 string? connectionString = AppConfig.ReadConnectionString(settingsPath);
                 if (string.IsNullOrEmpty(connectionString) || connectionString == "Put_Your_Connection_String_Here") 
                 {
                     Console.WriteLine("Строка подключения к базе данных не задана в appsettings.json (ConnectionString).");
+                    WaitBeforeExit();
                     return;
                 }
 
@@ -66,6 +89,7 @@ namespace CookingBot
                 {
                     Console.WriteLine("Не удалось подключиться к базе данных: " + ex.Message);
                     Console.WriteLine("Проверьте строку ConnectionString в appsettings.json (и запущен ли PostgreSQL).");
+                    WaitBeforeExit();
                     return;
                 }
 
@@ -90,14 +114,11 @@ namespace CookingBot
                 var handler = new UpdateHandler(userService, toDoService, toDoReportService, contextRepository, scenarios, toDoListService, settingsPath);
                 var botClient = new TelegramBotClient(botToken);
 
-                // Установка команд для меню BotCommand (базовый набор для всех)
-                await botClient.SetMyCommands(Keyboards.GetCommandsForUser(null), cancellationToken: cts.Token);
-
-                // Установка кнопок меню
-                await botClient.SetChatMenuButton(menuButton: new MenuButtonCommands(), cancellationToken: cts.Token);
-
-                Console.WriteLine($"Конфигурация загружена: MaxTasks={maxTasks}, MaxLengthTask={maxLengthTask}, MaxListsPerUser={maxListsPerUser}, MaxRecipesPerList={maxRecipesPerList}");
-
+                // Ранняя проверка связи с Telegram и токена
+                // (аналогично проверке БД выше):
+                // GetMe выполняется до установки меню,
+                // чтобы при отсутствии сети или неверном токене бота
+                // печатал понятное сообщение и не запускался
                 try
                 {
                     var me = await botClient.GetMe(cts.Token);
@@ -106,13 +127,24 @@ namespace CookingBot
                 catch (Telegram.Bot.Exceptions.ApiRequestException ex) when (ex.ErrorCode == 401)
                 {
                     Console.WriteLine("Неверный токен бота (Unauthorized). Проверьте appsettings.json.");
+                    WaitBeforeExit();
                     return;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Ошибка при вызове GetMe: {ex.Message}");
+                    Console.WriteLine("Нет соединения с Telegram: " + ex.Message);
+                    Console.WriteLine("Проверьте подключение к Интернету (и токен в appsettings.json).");
+                    WaitBeforeExit();
                     return;
                 }
+
+                Console.WriteLine($"Конфигурация загружена: MaxTasks={maxTasks}, MaxLengthTask={maxLengthTask}, MaxListsPerUser={maxListsPerUser}, MaxRecipesPerList={maxRecipesPerList}");
+
+                // Установка команд для меню BotCommand (базовый набор для всех)
+                await botClient.SetMyCommands(Keyboards.GetCommandsForUser(null), cancellationToken: cts.Token);
+
+                // Установка кнопок меню
+                await botClient.SetChatMenuButton(menuButton: new MenuButtonCommands(), cancellationToken: cts.Token);
 
                 var receiverOptions = new ReceiverOptions()
                 {
@@ -126,7 +158,8 @@ namespace CookingBot
 
                 // Фоновые задачи: создаем раннер и регистрируем в нем задачи
                 using var runner = new BackgroundTaskRunner();
-                runner.AddTask(new ResetScenarioBackgroundTask(TimeSpan.FromHours(1), contextRepository, botClient));
+                runner.AddTask(new ResetScenarioBackgroundTask(TimeSpan.FromHours(resetScenarioRunIntervalHours), 
+                    TimeSpan.FromHours(resetScenarioTimeoutHours), contextRepository, userService, botClient));
 
                 // Запуск фоновых задач - до запуска приема сообщений ботом
                 // (StartTasks возвращает void: он только стартует задачи и сразу выходит)
@@ -148,8 +181,29 @@ namespace CookingBot
             {
                 Console.WriteLine("Произошла непредвиденная ошибка: " + ex.Message);
             }
+
+            WaitBeforeExit();
         }
 
+        /// <summary>
+        /// Пауза перед завершением программы: печатает подсказку и ждёт нажатия
+        /// любой клавиши. Нужна, чтобы окно консоли не закрылось сразу при
+        /// запуске exe двойным кликом — без паузы сообщения об ошибках печатаются
+        /// и мгновенно исчезают вместе с окном (при запуске из VS сообщения и так
+        /// остаются на экране, будет просто одно лишнее нажатие клавиши).
+        /// </summary>
+        private static void WaitBeforeExit()
+        {
+            Console.WriteLine("Нажмите любую клавишу для выхода...");
+            Console.ReadKey(true);
+        }
+
+        /// <summary>
+        /// Читает и валидирует токен бота из appsettings.json:
+        /// файл существует, свойство BotToken есть, не заглушка, не слишком короткий.
+        /// </summary>
+        /// <param name="settingsPath">Полный путь к appsettings.json.</param>
+        /// <returns>Кортеж: токен (при успехе) или сообщение об ошибке (при неудаче).</returns>
         private static async Task<(string? botToken, string? errorMessage)> GetToken(string settingsPath)
         {
             if (!File.Exists(settingsPath))
@@ -185,6 +239,13 @@ namespace CookingBot
             }
         }
 
+        /// <summary>
+        /// Дополняет appsettings.json недостающими полями (токен, строка
+        /// подключения, лимиты, настройки фоновых задач) значениями по
+        /// умолчанию — чтобы бот при первом запуске создал шаблон конфига.
+        /// </summary>
+        /// <param name="settingsPath">Полный путь к appsettings.json.</param>
+        /// <param name="ct">Токен отмены операции.</param>
         private static async Task EnsureConfigurationAsync(string settingsPath, CancellationToken ct)
         {
             JsonObject root;
@@ -240,10 +301,23 @@ namespace CookingBot
                 needsSave = true;
             }
 
+            // Настройки фоновых задач (целые часы) - по умолчанию, если отсутствуют
+            if (!root.ContainsKey("ResetScenarioRunIntervalHours"))
+            {
+                root["ResetScenarioRunIntervalHours"] = 1;
+                needsSave = true;
+            }
+
+            if (!root.ContainsKey("ResetScenarioTimeoutHours"))
+            {
+                root["ResetScenarioTimeoutHours"] = 1;
+                needsSave = true;
+            }
+
             if (needsSave)
             {
                 await File.WriteAllTextAsync(settingsPath, root.ToString(), ct);
-                Console.WriteLine("Конфигурайия обновлена: добавлены недостающие поля.");
+                Console.WriteLine("Конфигурация обновлена: добавлены недостающие поля.");
             }
         }
     }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -35,17 +34,33 @@ namespace CookingBot.Helpers
             return (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList);
         }
 
-        /// <summary>
-        /// Читает строку подключения к PostgreSQL из appsettings.json.
-        /// Возвращает null, если свойства ConnectionString в файле нет.
-        /// </summary>
+        /// <summary>Читает строку подключения к PostgreSQL из appsettings.json.</summary>
         /// <param name="settingsPath">Полный путь к appsettings.json.</param>
+        /// <returns>Строка подключения; null, если свойства ConnectionString в файле нет.</returns>
         public static string? ReadConnectionString(string settingsPath)
         {
             var json = File.ReadAllText(settingsPath);
             using var doc = JsonDocument.Parse(json);
 
             return doc.RootElement.TryGetProperty("ConnectionString", out var cs) ? cs.GetString() : null;
+        }
+
+        /// <summary>
+        /// Читает настройки фоновых задач из appsettings.json (значения — целые часы).
+        /// Если какого-то поля нет — используется значение по умолчанию
+        /// (EnsureConfigurationAsync при старте дополняет недостающие поля).
+        /// </summary>
+        /// <param name="settingsPath">Полный путь к appsettings.json.</param>
+        /// <returns>Кортеж: интервал запуска задачи сброса сценариев (ч) и таймаут сценария (ч).</returns>
+        public static (int resetScenarioRunIntervalHours, int resetScenarioTimeoutHours) ReadBackgroundTasks(string settingsPath)
+        {
+            var json = File.ReadAllText(settingsPath);
+            using var doc = JsonDocument.Parse(json);
+
+            int runIntervalHours = doc.RootElement.TryGetProperty("ResetScenarioRunIntervalHours", out var ri) ? ri.GetInt32() : 1;
+            int timeoutHours = doc.RootElement.TryGetProperty("ResetScenarioTimeoutHours", out var t) ? t.GetInt32() : 1;
+
+            return (runIntervalHours, timeoutHours);
         }
     }
 }
