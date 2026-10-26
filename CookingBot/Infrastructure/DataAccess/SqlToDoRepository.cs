@@ -125,6 +125,16 @@ namespace CookingBot.Infrastructure.DataAccess
         }
 
         /// <inheritdoc/>
+        public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct)
+        {
+            using var dbContext = _factory.CreateDataContext();
+
+            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.UserId == userId && w.State == ToDoItem.ToDoItemState.Active && w.Deadline != null && w.Deadline >= from && w.Deadline < to).OrderBy(o => o.CreatedAt).ToListAsync(ct);
+
+            return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
+        }
+
+        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> GetAllAsync(CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();

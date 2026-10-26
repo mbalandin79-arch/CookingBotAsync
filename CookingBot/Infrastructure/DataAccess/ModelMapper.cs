@@ -68,7 +68,8 @@ namespace CookingBot.Infrastructure.DataAccess
                 Category = model.Category,
                 Ingredients = model.Ingredients.ToList(),
                 HiddenIngredients = model.HiddenIngredients.ToList(),
-                List = model.List != null ? MapFromModel(model.List) : null
+                List = model.List != null ? MapFromModel(model.List) : null,
+                Deadline = model.Deadline
             };
         }
 
@@ -96,7 +97,8 @@ namespace CookingBot.Infrastructure.DataAccess
                 UserId = entity.User!.UserId,
                 User = entity.User != null ? MapToModel(entity.User) : null!,
                 ListId = entity.List?.Id,
-                List = entity.List != null ? MapToModel(entity.List) : null
+                List = entity.List != null ? MapToModel(entity.List) : null,
+                Deadline = entity.Deadline
             };
         }
 

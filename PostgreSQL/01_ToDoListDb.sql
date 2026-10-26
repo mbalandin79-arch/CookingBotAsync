@@ -5,7 +5,7 @@
 --
 -- Содержимое:
 --   1. Удаление таблиц (для повторного запуска скрипта)
---   2. Таблицы: "ToDoUser", "ToDoList", "ToDoItem"
+--   2. Таблицы: "ToDoUser", "ToDoList", "ToDoItem", "Notification"
 --   3. Внешние ключи (связи между таблицами)
 --   4. Индексы
 --
@@ -21,7 +21,9 @@
 -- 1. Удаление таблиц, если они уже существуют.
 -- Нужно, чтобы скрипт можно было запускать повторно.
 -- ВНИМАНИЕ: это уничтожит все данные в таблицах!
+-- Порядок: сначала дочерние таблицы (FK), потом родительские.
 -- ------------------------------------------------------------
+DROP TABLE IF EXISTS "Notification";
 DROP TABLE IF EXISTS "ToDoItem";
 DROP TABLE IF EXISTS "ToDoList";
 DROP TABLE IF EXISTS "ToDoUser";
@@ -69,8 +71,23 @@ CREATE TABLE "ToDoItem"
     "HiddenIngredients" TEXT[]      NOT NULL,  -- скрытые ингредиенты (поиск недоступен)
     "UserId"            UUID        NOT NULL,  -- автор рецепта -> "ToDoUser"."UserId"
     "ListId"            UUID        NULL,      -- список (подкатегория) -> "ToDoList"."Id"; NULL = без списка
+    "Deadline"          TIMESTAMPTZ NULL,      -- дедлайн рецепта, дата планируемого приготовления (NULL = нет дедлайна)
 
     CONSTRAINT "PK_ToDoItem" PRIMARY KEY ("Id")
+);
+
+-- Нотификации (из сущности Notification, ДЗ17)
+CREATE TABLE "Notification"
+(
+    "Id"          UUID        NOT NULL,  -- PRIMARY KEY
+    "UserId"      UUID        NOT NULL,  -- получатель -> "ToDoUser"."UserId"
+    "Type"        TEXT        NOT NULL,  -- тип нотификации (например: DeadLine_{Id рецепта}, Today_{дата})
+    "Text"        TEXT        NOT NULL,  -- текст, который будет отправлен
+    "ScheduledAt" TIMESTAMPTZ NOT NULL,  -- запланированная дата отправки (в UTC)
+    "IsNotified"  BOOLEAN     NOT NULL,  -- флаг отправки: false - ждёт отправки
+    "NotifiedAt"  TIMESTAMPTZ NULL,      -- фактическая дата отправки (NULL - не отправлена)
+
+    CONSTRAINT "PK_Notification" PRIMARY KEY ("Id")
 );
 
 -- ------------------------------------------------------------
@@ -90,6 +107,11 @@ ALTER TABLE "ToDoItem" ADD CONSTRAINT "FK_ToDoItem_ToDoUser"
 ALTER TABLE "ToDoItem" ADD CONSTRAINT "FK_ToDoItem_ToDoList"
     FOREIGN KEY ("ListId") REFERENCES "ToDoList" ("Id") ON DELETE CASCADE;
 
+-- У каждой нотификации один получатель; у пользователя много нотификаций.
+-- При удалении пользователя его нотификации удаляются автоматически.
+ALTER TABLE "Notification" ADD CONSTRAINT "FK_Notification_ToDoUser"
+    FOREIGN KEY ("UserId") REFERENCES "ToDoUser" ("UserId") ON DELETE CASCADE;
+
 -- ------------------------------------------------------------
 -- 4. Индексы
 -- ------------------------------------------------------------
@@ -101,6 +123,10 @@ ALTER TABLE "ToDoItem" ADD CONSTRAINT "FK_ToDoItem_ToDoList"
 CREATE INDEX "IX_ToDoList_UserId"  ON "ToDoList" ("UserId");
 CREATE INDEX "IX_ToDoItem_UserId"  ON "ToDoItem" ("UserId");
 CREATE INDEX "IX_ToDoItem_ListId"  ON "ToDoItem" ("ListId");
+
+-- Индекс на UserId таблицы Notification (требование ДЗ17):
+-- ускоряет выборку "нотификации пользователя" и работу FK при удалении.
+CREATE INDEX "IX_Notification_UserId" ON "Notification" ("UserId");
 
 -- Уникальный индекс: один Telegram-аккаунт = один пользователь.
 -- База сама не даст завести двух пользователей с одним TelegramUserId.

@@ -74,7 +74,7 @@ namespace CookingBot.Core.Services
 
         /// <inheritdoc/>
         public async Task<ToDoItem> AddAsync(ToDoUser user, string name, ToDoItem.MainCategory category, 
-            List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct)
+            List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, DateTime? deadline, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(name))
@@ -105,7 +105,8 @@ namespace CookingBot.Core.Services
                 Category = category,
                 Ingredients = ingredients,
                 HiddenIngredients = hiddenIngredients,
-                List = todoList
+                List = todoList,
+                Deadline = deadline
             };
             await _toDoRepository.AddAsync(item, ct);
             return item;

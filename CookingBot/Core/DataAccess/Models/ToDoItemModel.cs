@@ -69,5 +69,9 @@ namespace CookingBot.Core.DataAccess.Models
         /// <summary>Раздел рецепта (ассоциация по ListId; заполняется при LoadWith; null — без раздела).</summary>
         [Association(ThisKey = nameof(ListId), OtherKey = nameof(ToDoListModel.Id))]
         public ToDoListModel? List { get; set; }
+
+        /// <summary>Дедлайн рецепта (в UTC); null — дедлайн не задан.</summary>
+        [Column("Deadline")]
+        public DateTime? Deadline { get; set; }
     }
 }

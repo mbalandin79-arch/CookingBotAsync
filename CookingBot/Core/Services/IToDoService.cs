@@ -61,13 +61,15 @@ namespace CookingBot.Core.Services
         /// <param name="hiddenIngredients">Скрытые ингредиенты (поиск не возможен).</param>
         /// <param name="steps">Шаги приготовления.</param>
         /// <param name="todoList">Раздел рецепта; null — без раздела.</param>
+        /// <param name="deadline">Дедлайн рецепта (в UTC); null — без дедлайна.</param>
         /// <param name="ct">Токен отмены операции.</param>
         /// <returns>Созданный рецепт.</returns>
         /// <exception cref="ArgumentException">Название пустое или состоит из пробелов.</exception>
         /// <exception cref="TaskCountLimitException">Достигнут лимит активных рецептов или лимит рецептов в разделе.</exception>
         /// <exception cref="TaskLengthLimitException">Название длиннее допустимого.</exception>
         /// <exception cref="DuplicateTaskException">Рецепт с таким названием у пользователя уже есть.</exception>
-        Task<ToDoItem> AddAsync(ToDoUser user, string name, ToDoItem.MainCategory category, List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct);
+        Task<ToDoItem> AddAsync(ToDoUser user, string name, ToDoItem.MainCategory category, List<string> ingredients, List<string> hiddenIngredients, 
+            List<string> steps, ToDoList? todoList, DateTime? deadline, CancellationToken ct);
 
         /// <summary>
         /// Переводит рецепт в состояние Completed

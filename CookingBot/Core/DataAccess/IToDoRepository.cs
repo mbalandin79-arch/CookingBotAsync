@@ -43,6 +43,19 @@ namespace CookingBot.Core.DataAccess
         Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct);
 
         /// <summary>
+        /// Возвращает активные рецепты пользователя, у которых дедлайн
+        /// попадает в интервал [from, to). Рецепты без дедлайна (Deadline = null)
+        /// не возвращаются. Используется фоновыми задачами: 
+        /// поиск просроченных дедлайнов и рецептов «на сегодня».
+        /// </summary>
+        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <param name="from">Начало интервала (включительно), в UTC.</param>
+        /// <param name="to">Конец интервала (не включительно), в UTC.</param>
+        /// <param name="ct">Токен отмены операции.</param>
+        /// <returns>Активные рецепты пользователя с дедлайном в интервале, упорядоченные по дате создания.</returns>
+        Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct);
+
+        /// <summary>
         /// Возвращает рецепты пользователя, удовлетворяющие предикату.
         /// Предикат вычисляется в памяти (не транслируется в SQL).
         /// </summary>

@@ -5,8 +5,8 @@
 -- СУБД: PostgreSQL 18
 --
 -- Как запускать:
---   Подключитесь к базе "ToDoList", где выполнены ToDoListDb.sql
---   и ToDoListDb_Insert.sql, и выполняйте запросы (каждый отдельно
+--   Подключитесь к базе "ToDoList", где выполнены 01_ToDoListDb.sql
+--   и 02_ToDoListDb_Insert.sql, и выполняйте запросы (каждый отдельно
 --   или файлом целиком).
 --
 -- В каждом запросе комментарием указан метод интерфейса,
@@ -93,3 +93,56 @@ WHERE EXISTS (
     WHERE lower(ing) = lower('Мука')
 )
 ORDER BY "CreatedAt";
+
+-- ------------------------------------------------------------
+-- ДЗ17: фоновые задачи и нотификации
+-- ------------------------------------------------------------
+
+-- GetActiveWithDeadline(userId, from, to): активные рецепты пользователя,
+-- у которых дедлайн попадает в интервал [from, to).
+-- Пример для DeadlineBackgroundTask (дедлайны "вчера"):
+--   from = '2026-10-26', to = '2026-10-27' (даты UTC).
+SELECT * FROM "ToDoItem"
+WHERE "UserId" = '00000000-0000-0000-0000-000000000002'
+  AND "State" = 0
+  AND "Deadline" IS NOT NULL
+  AND "Deadline" >= '2026-10-26'
+  AND "Deadline" < '2026-10-27'
+ORDER BY "CreatedAt";
+
+-- Пример для TodayBackgroundTask (дедлайны "сегодня"):
+--   from = '2026-10-27', to = '2026-10-28'.
+SELECT * FROM "ToDoItem"
+WHERE "State" = 0
+  AND "Deadline" IS NOT NULL
+  AND "Deadline" >= '2026-10-27'
+  AND "Deadline" < '2026-10-28'
+ORDER BY "CreatedAt";
+
+-- GetAllUsersAsync(): все пользователи (для перебора в фоновых задачах)
+SELECT * FROM "ToDoUser"
+ORDER BY "TelegramUserName";
+
+-- ------------------------------------------------------------
+-- ДЗ17: NotificationService (нотификации)
+-- ------------------------------------------------------------
+
+-- ScheduleNotification - проверка дубля (userId + type):
+-- EXISTS возвращает true, если нотификация такого типа уже есть
+SELECT EXISTS (
+    SELECT 1 FROM "Notification"
+    WHERE "UserId" = '00000000-0000-0000-0000-000000000001'
+      AND "Type" = 'Deadline_00000000-0000-0000-0002-000000000004'
+) AS "Дубль";
+
+-- GetScheduledNotification(scheduledBefore): неотправленные нотификации,
+-- время которых наступило (их рассылает NotificationBackgroundTask)
+SELECT * FROM "Notification"
+WHERE "IsNotified" = false
+  AND "ScheduledAt" <= now() AT TIME ZONE 'UTC'
+ORDER BY "ScheduledAt";
+
+-- Справочно: MarkNotified после успешной отправки выполняет
+-- UPDATE "Notification" SET "IsNotified" = true, "NotifiedAt" = <текущее время UTC>
+-- WHERE "Id" = <Id нотификации>. Здесь не выполняется: этот файл -
+-- только выборки, данные не меняет.

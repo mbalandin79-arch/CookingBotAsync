@@ -96,13 +96,13 @@ namespace CookingBot
                 var userRepository = new SqlUserRepository(dataContextFactory);
                 var toDoRepository = new SqlToDoRepository(dataContextFactory);
                 var toDoListRepository = new SqlToDoListRepository(dataContextFactory);
-
                 var toDoService = new ToDoService(toDoRepository);
                 await toDoService.SetConfigurationAsync(maxTasks, maxLengthTask, maxRecipesPerList, cts.Token);
                 var toDoReportService = new ToDoReportService(toDoService);
                 var toDoListService = new ToDoListService(toDoListRepository);
                 await toDoListService.SetConfigurationAsync(maxListsPerUser, cts.Token);
                 var userService = new UserService(userRepository);
+                var notificationService = new NotificationService(dataContextFactory);
                 var contextRepository = new InMemoryScenarioContextRepository();
                 var scenarios = new List<IScenario>
                 {
@@ -160,6 +160,9 @@ namespace CookingBot
                 using var runner = new BackgroundTaskRunner();
                 runner.AddTask(new ResetScenarioBackgroundTask(TimeSpan.FromHours(resetScenarioRunIntervalHours), 
                     TimeSpan.FromHours(resetScenarioTimeoutHours), contextRepository, userService, botClient));
+                runner.AddTask(new NotificationBackgroundTask(notificationService, botClient));
+                runner.AddTask(new DeadlineBackgroundTask(notificationService, userRepository, toDoRepository));
+                runner.AddTask(new TodayBackgroundTask(notificationService, userRepository, toDoRepository));
 
                 // Запуск фоновых задач - до запуска приема сообщений ботом
                 // (StartTasks возвращает void: он только стартует задачи и сразу выходит)
