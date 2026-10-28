@@ -1,43 +1,36 @@
 ﻿using System;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using CookingBot.Core.DataAccess;
-using CookingBot.Core.Entities;
 
 namespace CookingBot.Core.Services
 {
     /// <summary>
-    /// Сервис статистики: сводка по рецептам пользователя.
-    /// Считает общее количество, активные и завершённые рецепты
-    /// на основе данных IToDoService.
+    /// Сервис статистики: сводка по рецептам и разделам пользователя
+    /// на основе данных IToDoService и IToDoListService.
     /// </summary>
     internal class ToDoReportService : IToDoReportService
     {
         private readonly IToDoService _todoService;
+        private readonly IToDoListService _toDoListService;
 
         /// <summary>Создаёт сервис статистики.</summary>
         /// <param name="todoService">Сервис рецептов (источник данных).</param>
-        public ToDoReportService(IToDoService todoService)
+        /// <param name="toDoListService">Сервис разделов (источник данных).</param>
+        public ToDoReportService(IToDoService todoService, IToDoListService toDoListService)
         {
             _todoService = todoService;
+            _toDoListService = toDoListService;
         }
 
         /// <inheritdoc/>
-        public async Task<(int total, int completed, int active, DateTime generatedAt)> GetUserStatsAsync(Guid userId, CancellationToken ct)
+        public async Task<(int totalRecipes, int totalLists)> GetUserStatsAsync(Guid userId, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            DateTime _generateAt = DateTime.UtcNow;
 
             var allByUser = await _todoService.GetAllByUserIdAsync(userId, ct);
-            var activeByUser = await _todoService.GetActiveByUserIdAsync(userId, ct);
+            var listsByUser = await _toDoListService.GetUserListsAsync(userId, ct);
 
-            int _total = allByUser.Count;
-            int _active = activeByUser.Count;
-            int _completed = _total - _active;
-
-            return (total: _total, completed: _completed, active: _active, generatedAt: _generateAt);
+            return (totalRecipes: allByUser.Count, totalLists: listsByUser.Count);
         }
     }
 }

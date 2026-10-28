@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using CookingBot.Helpers;
 using CookingBot.Core.Entities;
 using Telegram.Bot;
 using Telegram.Bot.Types;
@@ -12,7 +12,7 @@ namespace CookingBot.TelegramBot
     internal partial class UpdateHandler
     {
         /// <summary>
-        /// Обрабатывает /cancel и кнопку «Отмена»: сбрасывает активный сценарий,
+        /// Обрабатывает кнопку «Отмена» (текст «Отмена»): сбрасывает активный сценарий,
         /// убирает ReplyKeyboardMarkup и показывает главное меню.
         /// </summary>
         /// <param name="telegramBotClient">Клиент Telegram.</param>
@@ -34,7 +34,7 @@ namespace CookingBot.TelegramBot
         }
 
         /// <summary>
-        /// Обрабатывает команды BotCommand-меню: /start, /cook, /my, /info,
+        /// Обрабатывает команды BotCommand-меню: /start, /cook, /my,
         /// /help, /exit, /admin. Перед выполнением сбрасывает активный сценарий
         /// (с предупреждением «Данные не сохранены»).
         /// </summary>
@@ -65,9 +65,6 @@ namespace CookingBot.TelegramBot
                     break;
                 case "/my":
                     await SendProfileMenuAsync(telegramBotClient, chat, userId, ct);
-                    break;
-                case "/info":
-                    await InfoAsync(telegramBotClient, chat, ct);
                     break;
                 case "/help":
                     await HelpAsync(telegramBotClient, chat, userId, ct);
@@ -124,7 +121,6 @@ namespace CookingBot.TelegramBot
             str.AppendLine(" (доступно только для зарегистрированных пользователей)");
             str.Append(" \"/help\" - отображает краткую информацию как пользоваться Ботом,");
             str.AppendLine(" также выводит список доступных команд во время работы");
-            str.AppendLine(" \"/info\" - предоставляет информацию о версии программы и дате её создания");
             str.AppendLine(" \"/exit\" - завершает сессию работы зарегистрированного пользователя");
             str.AppendLine(" В процессе работы перечень доступных команд будет меняться");
             str.AppendLine(" Команды следует выбирать из меню ☰");
@@ -190,6 +186,12 @@ namespace CookingBot.TelegramBot
             str.AppendLine($" Registered Date: {newUser.RegisteredAt}");
             str.AppendLine($" State: {newUser.State}");
             await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
+
+            // Персональное меню ☰ под роль нового пользователя.
+            // scope обязателен: без него меню переписалось бы ВСЕМ пользователям.
+            await telegramBotClient.SetMyCommands(Keyboards.GetCommandsForUser(newUser),
+                scope: new BotCommandScopeChat { ChatId = userId }, cancellationToken: ct);
+
             var prompt = "Меню доступно внизу чата (кнопка \u2630).";
             await telegramBotClient.SendMessage(chat, prompt,
                 replyMarkup: new ReplyKeyboardRemove(), cancellationToken: ct);
@@ -253,41 +255,32 @@ namespace CookingBot.TelegramBot
             }
             str.AppendLine(" \"/cook\" - работа с рецептами");
             str.AppendLine(" \"/help\" - краткая справка по доступным командам");
-            str.AppendLine(" \"/info\" - информация о версии программы и дате её создания");
             str.AppendLine(" \"/exit\" - завершает сессию пользователя");
             if (user != null)
             {
-                str.AppendLine(" \"/cancel\" - отменяет текущий сценарий");
                 if (user.State == ToDoUser.ToDoUserState.Admin || user.State == ToDoUser.ToDoUserState.Moderator)
                 {
                     str.AppendLine(" \"/admin\" - администрирование проекта");
                 }
             }
             str.AppendLine("\n Команды можно вводить текстом или выбирать из меню ☰");
-            str.AppendLine(" В меню \"Рецепты\" доступны: добавление, поиск, просмотр рецептов");
-            str.AppendLine(" При просмотре рецепта доступны: ✅Выполнить, ❌Удалить");
+            if (user == null)
+            {
+                str.AppendLine(" В меню \"Рецепты\" доступны: поиск, просмотр рецептов");
+            }
+            else
+            {
+                str.AppendLine(" В меню \"Рецепты\" доступны: добавление, поиск, просмотр рецептов");
+            }
+            str.AppendLine(" При просмотре рецепта доступны: ❌Удалить");
+            str.AppendLine($"\n Версия программы: {VersionInfo.Version}");
+            str.Append($" Проект создан: {VersionInfo.CreationDate}");
             await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
         }
 
-        /// <summary>Обрабатывает /info: версия сборки (из Assembly) и дата создания.</summary>
-        /// <param name="telegramBotClient">Клиент Telegram.</param>
-        /// <param name="chat">Чат с пользователем.</param>
-        /// <param name="ct">Токен отмены операции.</param>
-        private async Task InfoAsync(ITelegramBotClient telegramBotClient, Chat chat,
-            CancellationToken ct)
-        {
-            string createDate = " Created 21.05.2026    ";
-
-            Assembly assembly = Assembly.GetExecutingAssembly();
-            AssemblyName assemblyName = assembly.GetName();
-            Version version = assemblyName.Version!;
-
-            await telegramBotClient.SendMessage(chat, $"{createDate} The Version used {version}", cancellationToken: ct);
-        }
-
         /// <summary>
-        /// Отправляет статистику по рецептам пользователя (всего/завершённых/
-        /// активных) через ToDoReportService.
+        /// Отправляет статистику пользователя: количество рецептов и разделов
+        /// с лимитами по роли (у Moderator/Admin — «без ограничений»).
         /// </summary>
         /// <param name="telegramBotClient">Клиент Telegram.</param>
         /// <param name="chat">Чат с пользователем.</param>
@@ -303,14 +296,16 @@ namespace CookingBot.TelegramBot
                 await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
                 return;
             }
-            var (total, completed, active, generatedAt) = await _toDoReportService.GetUserStatsAsync(user!.UserId, ct);
-            string generatedAtStr = generatedAt.ToShortDateString();
+            var (totalRecipes, totalLists) = await _toDoReportService.GetUserStatsAsync(user!.UserId, ct);
+            int? recipeLimit = _todoService.GetRecipeLimit(user.State);
+            int? listLimit = _toDoListService.GetListLimit(user.State);
+            string recipesLimitText = recipeLimit.HasValue ? $"лимит {recipeLimit.Value}" : "без ограничений";
+            string listsLimitText = listLimit.HasValue ? $"лимит {listLimit.Value}" : "без ограничений";
 
             var str = new StringBuilder("\n");
-            str.AppendLine($" Статистика по задачам на {generatedAtStr}");
-            str.AppendLine($" Всего: {total}");
-            str.AppendLine($" Завершенных: {completed}");
-            str.AppendLine($" Активных: {active}");
+            str.AppendLine(" Статистика:");
+            str.AppendLine($" Всего рецептов: {totalRecipes} ({recipesLimitText})");
+            str.AppendLine($" Разделов: {totalLists} ({listsLimitText})");
             await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
         }
     }

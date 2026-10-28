@@ -10,15 +10,6 @@ namespace CookingBot.Core.Entities
     /// </summary>
     public class ToDoItem
     {
-        /// <summary>Состояние рецепта: в работе или завершён.</summary>
-        public enum ToDoItemState
-        {
-            /// <summary>Рецепт в работе.</summary>
-            Active,
-            /// <summary>Рецепт завершён.</summary>
-            Completed
-        }
-
         /// <summary>
         /// Категория рецепта — крупный раздел кулинарной книги
         /// (суп, салат, основное блюдо и т.д.).
@@ -55,10 +46,6 @@ namespace CookingBot.Core.Entities
         public List<string> Steps { get; set; } = new List<string>();
         /// <summary>Дата и время создания рецепта.</summary>
         public DateTime CreatedAt { get; set; }
-        /// <summary>Состояние рецепта (в работе / завершён).</summary>
-        public ToDoItemState State { get; set; }
-        /// <summary>Дата и время смены состояния рецепта (UTC); null, если состояние не менялось.</summary>
-        public DateTime? StateChangedAt { get; set; }
         /// <summary>Категория рецепта — раздел кулинарной книги.</summary>
         public MainCategory Category { get; set; }
         /// <summary>Ингредиенты рецепта: по ним возможен поиск.</summary>
@@ -70,12 +57,6 @@ namespace CookingBot.Core.Entities
         /// null — рецепт без подкатегории.
         /// </summary>
         public ToDoList? List { get; set; }
-        /// <summary>
-        /// Дедлайн рецепта — дата, до которой пользователь планирует приготовить
-        /// блюдо (в UTC); null — дедлайн не задан. Используется фоновыми задачами
-        /// нотификаций: просроченный дедлайн и «задачи на сегодня».
-        /// </summary>
-        public DateTime? Deadline { get; set; }
 
         /// <summary>
         /// Возвращает название категории на русском языке для отображения пользователю.
@@ -96,21 +77,6 @@ namespace CookingBot.Core.Entities
                 MainCategory.Sauce => "Соус",
                 MainCategory.Other => "Без категории",
                 _ => category.ToString()
-            };
-        }
-
-        /// <summary>
-        /// Возвращает название состояния рецепта на русском языке для отображения пользователю.
-        /// </summary>
-        /// <param name="state">Состояние рецепта.</param>
-        /// <returns>Русское название состояния; для неизвестного значения — его строковое представление.</returns>
-        public static string GetStateName(ToDoItemState state)
-        {
-            return state switch
-            {
-                ToDoItemState.Active => "Активна",
-                ToDoItemState.Completed => "Завершена",
-                _ => state.ToString()
             };
         }
     }

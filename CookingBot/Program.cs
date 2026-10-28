@@ -52,7 +52,7 @@ namespace CookingBot
                 Console.WriteLine();
 
                 // Чтение лимитов и строки подключения из конфига (AppConfig — единственное место, знающее формат файла)
-                var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(settingsPath);
+                var (maxTasksMember, maxTasksAdvanced, maxLengthTask, maxListsPerUserMember, maxListsPerUserAdvanced, maxRecipesPerList) = AppConfig.ReadLimits(settingsPath);
 
                 // Настройки фоновых задач (целые часы; файл конфига правит только Администратор)
                 var (resetScenarioRunIntervalHours, resetScenarioTimeoutHours) = AppConfig.ReadBackgroundTasks(settingsPath);
@@ -97,10 +97,10 @@ namespace CookingBot
                 var toDoRepository = new SqlToDoRepository(dataContextFactory);
                 var toDoListRepository = new SqlToDoListRepository(dataContextFactory);
                 var toDoService = new ToDoService(toDoRepository);
-                await toDoService.SetConfigurationAsync(maxTasks, maxLengthTask, maxRecipesPerList, cts.Token);
-                var toDoReportService = new ToDoReportService(toDoService);
+                await toDoService.SetConfigurationAsync(maxTasksMember, maxTasksAdvanced, maxLengthTask, maxRecipesPerList, cts.Token);
                 var toDoListService = new ToDoListService(toDoListRepository);
-                await toDoListService.SetConfigurationAsync(maxListsPerUser, cts.Token);
+                await toDoListService.SetConfigurationAsync(maxListsPerUserMember, maxListsPerUserAdvanced, cts.Token);
+                var toDoReportService = new ToDoReportService(toDoService, toDoListService);
                 var userService = new UserService(userRepository);
                 var notificationService = new NotificationService(dataContextFactory);
                 var contextRepository = new InMemoryScenarioContextRepository();
@@ -138,7 +138,15 @@ namespace CookingBot
                     return;
                 }
 
-                Console.WriteLine($"Конфигурация загружена: MaxTasks={maxTasks}, MaxLengthTask={maxLengthTask}, MaxListsPerUser={maxListsPerUser}, MaxRecipesPerList={maxRecipesPerList}");
+                var str = new StringBuilder();
+                str.AppendLine("Конфигурация загружена:");
+                str.AppendLine($"MaxTasksMember={maxTasksMember}");
+                str.AppendLine($"MaxTasksAdvanced={maxTasksAdvanced}");
+                str.AppendLine($"MaxLengthTask={maxLengthTask}");
+                str.AppendLine($"MaxListsPerUserMember={maxListsPerUserMember}");
+                str.AppendLine($"MaxListsPerUserAdvanced={maxListsPerUserAdvanced}");
+                str.AppendLine($"MaxRecipesPerList={maxRecipesPerList}");
+                Console.WriteLine(str.ToString());
 
                 // Установка команд для меню BotCommand (базовый набор для всех)
                 await botClient.SetMyCommands(Keyboards.GetCommandsForUser(null), cancellationToken: cts.Token);
@@ -161,8 +169,6 @@ namespace CookingBot
                 runner.AddTask(new ResetScenarioBackgroundTask(TimeSpan.FromHours(resetScenarioRunIntervalHours), 
                     TimeSpan.FromHours(resetScenarioTimeoutHours), contextRepository, userService, botClient));
                 runner.AddTask(new NotificationBackgroundTask(notificationService, botClient));
-                runner.AddTask(new DeadlineBackgroundTask(notificationService, userRepository, toDoRepository));
-                runner.AddTask(new TodayBackgroundTask(notificationService, userRepository, toDoRepository));
 
                 // Запуск фоновых задач - до запуска приема сообщений ботом
                 // (StartTasks возвращает void: он только стартует задачи и сразу выходит)
@@ -243,85 +249,66 @@ namespace CookingBot
         }
 
         /// <summary>
-        /// Дополняет appsettings.json недостающими полями (токен, строка
-        /// подключения, лимиты, настройки фоновых задач) значениями по
-        /// умолчанию — чтобы бот при первом запуске создал шаблон конфига.
+        /// Строгая проверка appsettings.json: набор ключей файла должен
+        /// ТОЧНО совпадать с шаблоном (ни лишних, ни недостающих ключей).
+        /// Если файл отсутствует, повреждён или не соответствует шаблону —
+        /// он ПОЛНОСТЬЮ пересоздаётся по шаблону, БЕЗ переноса данных
+        /// (в том числе BotToken и ConnectionString станут заглушками -
+        /// их придётся вписать заново).
         /// </summary>
         /// <param name="settingsPath">Полный путь к appsettings.json.</param>
         /// <param name="ct">Токен отмены операции.</param>
         private static async Task EnsureConfigurationAsync(string settingsPath, CancellationToken ct)
         {
-            JsonObject root;
-            bool needsSave = false;
+            // Эталонный набор ключей (единственные ключи, которые читает код)
+            var expectedKeys = new[]
+            {
+                "BotToken", "ConnectionString",
+                "MaxTasksMember", "MaxTasksAdvanced", "MaxLengthTask",
+                "MaxListsPerUserMember", "MaxListsPerUserAdvanced", "MaxRecipesPerList",
+                "ResetScenarioRunIntervalHours", "ResetScenarioTimeoutHours"
+            };
 
+            // Файл считается годным, только если он существует, читается
+            // и содержит ровно эталонный набор ключей
+            bool isValid = false;
             if (File.Exists(settingsPath))
             {
-                var json = await File.ReadAllTextAsync(settingsPath, ct);
-                root = JsonNode.Parse(json)?.AsObject() ?? new JsonObject();
-            }
-            else
-            {
-                root = new JsonObject();
-                needsSave = true;
-            }
-
-            // BotToken - заглушка, если отсутствует
-            if (!root.ContainsKey("BotToken"))
-            {
-                root["BotToken"] = "Put_Your_Bot_Token_Here";
-                needsSave = true;
-            }
-
-            // ConnectionString - заглушка, если отсутствует
-            if (!root.ContainsKey("ConnectionString"))
-            {
-                root["ConnectionString"] = "Put_Your_Connection_String_Here";
-                needsSave = true;
+                try
+                {
+                    var json = await File.ReadAllTextAsync(settingsPath, ct);
+                    var root = JsonNode.Parse(json)?.AsObject();
+                    isValid = root != null &&
+                        root.Count == expectedKeys.Length &&
+                        expectedKeys.All(key => root.ContainsKey(key));
+                }
+                catch (JsonException)
+                {
+                    // Файл повреждён (не разбирается как JSON) - пересоздадим
+                    isValid = false;
+                }
             }
 
-            // Лимиты - добавляем недостающие
-            if (!root.ContainsKey("MaxTasks"))
-            {
-                root["MaxTasks"] = 100;
-                needsSave = true;
-            }
+            if (isValid)
+                return;
 
-            if (!root.ContainsKey("MaxLengthTask"))
+            // Шаблон конфигурации: заглушки секретов + значения по умолчанию
+            var template = new JsonObject
             {
-                root["MaxLengthTask"] = 100;
-                needsSave = true;
-            }
-
-            if (!root.ContainsKey("MaxListsPerUser"))
-            {
-                root["MaxListsPerUser"] = 10;
-                needsSave = true;
-            }
-
-            if (!root.ContainsKey("MaxRecipesPerList"))
-            {
-                root["MaxRecipesPerList"] = 50;
-                needsSave = true;
-            }
-
-            // Настройки фоновых задач (целые часы) - по умолчанию, если отсутствуют
-            if (!root.ContainsKey("ResetScenarioRunIntervalHours"))
-            {
-                root["ResetScenarioRunIntervalHours"] = 1;
-                needsSave = true;
-            }
-
-            if (!root.ContainsKey("ResetScenarioTimeoutHours"))
-            {
-                root["ResetScenarioTimeoutHours"] = 1;
-                needsSave = true;
-            }
-
-            if (needsSave)
-            {
-                await File.WriteAllTextAsync(settingsPath, root.ToString(), ct);
-                Console.WriteLine("Конфигурация обновлена: добавлены недостающие поля.");
-            }
+                ["BotToken"] = "Put_Your_Bot_Token_Here",
+                ["ConnectionString"] = "Put_Your_Connection_String_Here",
+                ["MaxTasksMember"] = 100,
+                ["MaxTasksAdvanced"] = 200,
+                ["MaxLengthTask"] = 100,
+                ["MaxListsPerUserMember"] = 10,
+                ["MaxListsPerUserAdvanced"] = 20,
+                ["MaxRecipesPerList"] = 50,
+                ["ResetScenarioRunIntervalHours"] = 1,
+                ["ResetScenarioTimeoutHours"] = 1
+            };
+            await File.WriteAllTextAsync(settingsPath, template.ToString(), ct);
+            Console.WriteLine("appsettings.json отсутствовал, повреждён или не соответствовал шаблону - файл создан заново по шаблону.");
+            Console.WriteLine("ВНИМАНИЕ: данные не перенесены. Впишите заново BotToken и ConnectionString.");
         }
     }
 }

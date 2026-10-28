@@ -18,20 +18,25 @@ namespace CookingBot.Helpers
         /// Читает лимиты из appsettings.json.
         /// Если какого-то поля нет — используется значение по умолчанию
         /// (EnsureConfigurationAsync при старте дополняет недостающие поля).
+        /// Лимиты рецептов и разделов зависят от роли пользователя
+        /// (Member/Advanced; Moderator/Admin — без ограничений).
         /// </summary>
         /// <param name="settingsPath">Полный путь к appsettings.json.</param>
-        /// <returns>Кортеж из четырёх лимитов.</returns>
-        public static (int maxTasks, int maxLengthTask, int maxListsPerUser, int maxRecipesPerList) ReadLimits(string settingsPath)
+        /// <returns>Кортеж из шести лимитов.</returns>
+        public static (int maxTasksMember, int maxTasksAdvanced, int maxLengthTask, 
+            int maxListsPerUserMember, int maxListsPerUserAdvanced, int maxRecipesPerList) ReadLimits(string settingsPath)
         {
             var json = File.ReadAllText(settingsPath);
             using var doc = JsonDocument.Parse(json);
 
-            int maxTasks = doc.RootElement.TryGetProperty("MaxTasks", out var mt) ? mt.GetInt32() : 100;
+            int maxTasksMember = doc.RootElement.TryGetProperty("MaxTasksMember", out var mtm) ? mtm.GetInt32() : 100;
+            int maxTasksAdvanced = doc.RootElement.TryGetProperty("MaxTasksAdvanced", out var mta) ? mta.GetInt32() : 200;
             int maxLengthTask = doc.RootElement.TryGetProperty("MaxLengthTask", out var mlt) ? mlt.GetInt32() : 100;
-            int maxListsPerUser = doc.RootElement.TryGetProperty("MaxListsPerUser", out var ml) ? ml.GetInt32() : 10;
+            int maxListsPerUserMember = doc.RootElement.TryGetProperty("MaxListsPerUserMember", out var mlm) ? mlm.GetInt32() : 10;
+            int maxListsPerUserAdvanced = doc.RootElement.TryGetProperty("MaxListsPerUserAdvanced", out var mla) ? mla.GetInt32() : 20;
             int maxRecipesPerList = doc.RootElement.TryGetProperty("MaxRecipesPerList", out var mr) ? mr.GetInt32() : 50;
 
-            return (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList);
+            return (maxTasksMember, maxTasksAdvanced, maxLengthTask, maxListsPerUserMember, maxListsPerUserAdvanced, maxRecipesPerList);
         }
 
         /// <summary>Читает строку подключения к PostgreSQL из appsettings.json.</summary>

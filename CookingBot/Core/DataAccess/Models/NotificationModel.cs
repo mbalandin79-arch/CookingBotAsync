@@ -28,7 +28,7 @@ namespace CookingBot.Core.DataAccess.Models
         [Association(ThisKey = nameof(UserId), OtherKey = nameof(ToDoUserModel.UserId))]
         public ToDoUserModel User { get; set; } = null!;
 
-        /// <summary>Тип нотификации (например: DeadLine_{Id рецепта}, Today_{дата}).</summary>
+        /// <summary>Тип нотификации (например: Daily_{дата}).</summary>
         [Column("Type")]
         public string Type { get; set; } = null!;
 

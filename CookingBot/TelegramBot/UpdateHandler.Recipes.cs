@@ -60,38 +60,6 @@ namespace CookingBot.TelegramBot
         }
 
         /// <summary>
-        /// Показывает выполненные рецепты пользователя в разделе
-        /// (постранично, редактированием текущего сообщения).
-        /// </summary>
-        /// <param name="telegramBotClient">Клиент Telegram.</param>
-        /// <param name="data">Callback-данные кнопки («show_completed|Id|страница»).</param>
-        /// <param name="chat">Чат с пользователем.</param>
-        /// <param name="userId">Идентификатор пользователя в Telegram.</param>
-        /// <param name="messageId">Id редактируемого сообщения.</param>
-        /// <param name="ct">Токен отмены операции.</param>
-        private async Task HandleShowCompletedAsync(ITelegramBotClient telegramBotClient,
-            string data, Chat chat, long userId, int messageId, CancellationToken ct)
-        {
-            var dto = PagedListCallbackDto.FromString(data);
-            var user = await _userService.GetUserAsync(userId, ct);
-            if (user == null)
-                return;
-
-            var allItems = await _todoService.GetByUserIdAndList(user.UserId, dto.ToDoListId, ct);
-            var completedItems = allItems.Where(w => w.State == ToDoItem.ToDoItemState.Completed).ToList();
-            if (completedItems.Count == 0)
-            {
-                await telegramBotClient.SendMessage(chat, "Задач нет", cancellationToken: ct);
-                return;
-            }
-
-            var buttons = BuildTaskButtons(completedItems);
-
-            await EditMessageTextSafeAsync(telegramBotClient, chat, messageId, "Выполненные рецепты:",
-                Keyboards.BuildPagedButtons(buttons, dto), ct);
-        }
-
-        /// <summary>
         /// Показывает все рецепты всех пользователей (постранично,
         /// редактированием текущего сообщения).
         /// </summary>
@@ -136,34 +104,26 @@ namespace CookingBot.TelegramBot
                 return;
 
             var allItems = await _todoService.GetByUserIdAndList(user.UserId, dto.ToDoListId, ct);
-            var activeItems = allItems.Where(w => w.State == ToDoItem.ToDoItemState.Active).ToList();
 
-            if (activeItems.Count == 0)
+            if (allItems.Count == 0)
             {
                 await telegramBotClient.SendMessage(chat, "Задач нет", cancellationToken: ct);
                 return;
             }
 
-            var buttons = BuildTaskButtons(activeItems);
-            var extraButton = new KeyValuePair<string, string>("☑️Посмотреть выполненные", new PagedListCallbackDto
-            {
-                Action = "show_completed",
-                ToDoListId = dto.ToDoListId,
-                Page = 0
-            }.ToString());
+            var buttons = BuildTaskButtons(allItems);
 
             await EditMessageTextSafeAsync(telegramBotClient, chat, messageId, "Выберите рецепт:",
-                Keyboards.BuildPagedButtons(buttons, dto, extraButton), ct);
+                Keyboards.BuildPagedButtons(buttons, dto), ct);
         }
 
         /// <summary>
         /// Обрабатывает кнопки карточки рецепта: «showtask» — карточка рецепта
         /// (все поля, включая оба вида ингредиентов; владельцу — клавиатура
-        /// действий, остальным — только чтение); «completetask» — отметить
-        /// выполненным (только владелец).
+        /// действий, остальным — только чтение).
         /// </summary>
         /// <param name="telegramBotClient">Клиент Telegram.</param>
-        /// <param name="data">Callback-данные кнопки («showtask|Id» / «completetask|Id»).</param>
+        /// <param name="data">Callback-данные кнопки («showtask|Id»).</param>
         /// <param name="chat">Чат с пользователем.</param>
         /// <param name="userId">Идентификатор пользователя в Telegram.</param>
         /// <param name="ct">Токен отмены операции.</param>
@@ -201,32 +161,12 @@ namespace CookingBot.TelegramBot
                         str.AppendLine($" HiddenIngredients: {hiddeningredients}");
                         str.AppendLine($" Steps:");
                         str.AppendLine(task.Steps != null && task.Steps.Count > 0 ? string.Join("\n", task.Steps.Select((s, i) => $" {i + 1}. {s}")) : " -");
-                        str.AppendLine($" State: {ToDoItem.GetStateName(task.State)}");
-                        str.AppendLine($" StateChangedAt: {task.StateChangedAt}");
 
                         await telegramBotClient.SendMessage(chat, str.ToString(),
                             replyMarkup: isOwner ?
                                 Keyboards.BuildTaskActionKeyboard(task.Id) :
                                 Keyboards.BuildReadOnlyTaskKeyboard(),
                             cancellationToken: ct);
-                        break;
-                    }
-                case "completetask":
-                    {
-                        var task = await _todoService.GetTaskAsync(dto.ToDoItemId, ct);
-                        if (task == null)
-                        {
-                            await telegramBotClient.SendMessage(chat, "Рецепт не найден.", cancellationToken: ct);
-                            break;
-                        }
-
-                        if (currentUser == null || task.User.TelegramUserId != currentUser.TelegramUserId)
-                        {
-                            await telegramBotClient.SendMessage(chat, "Вы можете изменять только свои рецепты.", cancellationToken: ct);
-                            break;
-                        }
-                        await _todoService.MarkCompletedAsync(dto.ToDoItemId, ct);
-                        await telegramBotClient.SendMessage(chat, "Рецепт отмечен как выполненный.", cancellationToken: ct);
                         break;
                     }
             }

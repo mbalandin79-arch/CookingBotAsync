@@ -12,19 +12,29 @@ namespace CookingBot.Core.Services
 {
     /// <summary>
     /// Сервис рецептов: бизнес-логика над сущностью ToDoItem.
-    /// Проверяет лимиты (количество активных рецептов, длина названия,
-    /// количество рецептов в разделе) и дубликаты названий,
+    /// Проверяет лимиты (количество рецептов по роли пользователя, 
+    /// длина названия, количество рецептов в разделе) и дубликаты названий,
     /// работает с хранилищем через IToDoRepository.
     /// </summary>
     internal class ToDoService : IToDoService
     {
-        private int _maxTasks = 0;
+        private int _maxTasksMember = 0;
+        private int _maxTasksAdvanced = 0;
         private int _maxLengthTask = 0;
         private int _maxRecipesPerList = 50;
         private readonly IToDoRepository _toDoRepository;
 
         /// <inheritdoc/>
         public int MaxRecipeNameLength => _maxLengthTask;
+
+        /// <inheritdoc/>
+        public int? GetRecipeLimit(ToDoUser.ToDoUserState state)
+        {
+            if (state == ToDoUser.ToDoUserState.Moderator || state == ToDoUser.ToDoUserState.Admin)
+                return null;
+
+            return state == ToDoUser.ToDoUserState.Advanced ? _maxTasksAdvanced : _maxTasksMember;
+        }
 
         /// <summary>Создаёт сервис рецептов.</summary>
         /// <param name="toDoRepository">Репозиторий рецептов.</param>
@@ -33,15 +43,22 @@ namespace CookingBot.Core.Services
             _toDoRepository = toDoRepository;
         }
 
-        /// <summary>Проверяет лимит активных рецептов пользователя; бросает исключение при превышении.</summary>
-        /// <param name="userId">Идентификатор пользователя.</param>
+        /// <summary>
+        /// Проверяет лимит рецептов пользователя (лимит зависит от роли;
+        /// Moderator/Admin — без ограничений); бросает исключение при превышении.
+        /// </summary>
+        /// <param name="user">Пользователь, добавляющий рецепт.</param>
         /// <param name="ct">Токен отмены операции.</param>
-        /// <exception cref="TaskCountLimitException">Достигнут лимит активных рецептов.</exception>
-        private async Task CheckCountLimitAsync(Guid userId, CancellationToken ct)
+        /// <exception cref="TaskCountLimitException">Достигнут лимит рецептов для роли пользователя.</exception>
+        private async Task CheckCountLimitAsync(ToDoUser user, CancellationToken ct)
         {
-            var checkCount = await _toDoRepository.CountActiveAsync(userId, ct);
-            if (checkCount >= _maxTasks)
-                throw new TaskCountLimitException(_maxTasks);
+            if (user.State == ToDoUser.ToDoUserState.Moderator || user.State == ToDoUser.ToDoUserState.Admin)
+                return;
+
+            int limit = user.State == ToDoUser.ToDoUserState.Advanced ? _maxTasksAdvanced : _maxTasksMember;
+            var checkCount = await _toDoRepository.CountAsync(user.UserId, ct);
+            if (checkCount >= limit)
+                throw new TaskCountLimitException(limit);
         }
 
         /// <summary>Проверяет длину названия рецепта; бросает исключение при превышении.</summary>
@@ -74,7 +91,7 @@ namespace CookingBot.Core.Services
 
         /// <inheritdoc/>
         public async Task<ToDoItem> AddAsync(ToDoUser user, string name, ToDoItem.MainCategory category, 
-            List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, DateTime? deadline, CancellationToken ct)
+            List<string> ingredients, List<string> hiddenIngredients, List<string> steps, ToDoList? todoList, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(name))
@@ -82,7 +99,7 @@ namespace CookingBot.Core.Services
 
             name = name.Trim();
 
-            await CheckCountLimitAsync(user.UserId, ct);
+            await CheckCountLimitAsync(user, ct);
             CheckLengthLimits(name);
             await CheckDuplicateAsync(user.UserId, name, ct);
             if (todoList != null)
@@ -101,12 +118,10 @@ namespace CookingBot.Core.Services
                 Name = name,
                 Steps = steps,
                 CreatedAt = DateTime.UtcNow,
-                State = ToDoItem.ToDoItemState.Active,
                 Category = category,
                 Ingredients = ingredients,
                 HiddenIngredients = hiddenIngredients,
-                List = todoList,
-                Deadline = deadline
+                List = todoList
             };
             await _toDoRepository.AddAsync(item, ct);
             return item;
@@ -127,38 +142,17 @@ namespace CookingBot.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
-        {
-            return await _toDoRepository.GetActiveByUserIdAsync(userId, ct);
-        }
-
-        /// <inheritdoc/>
         public async Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct)
         {
             return await _toDoRepository.GetAllByUserIdAsync(userId, ct);
         }
 
         /// <inheritdoc/>
-        public async Task MarkCompletedAsync(Guid id, CancellationToken ct)
+        public async Task SetConfigurationAsync(int maxTasksMember, int maxTasksAdvanced, int maxLengthTask, int maxRecipesPerList, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            if (id == default(Guid))
-                return;
-
-            var item = await _toDoRepository.GetAsync(id, ct);
-            if (item != null)
-            {
-                item.State = ToDoItem.ToDoItemState.Completed;
-                item.StateChangedAt = DateTime.UtcNow; // универсальная дата и время на данный момент для всех часовых поясов
-                await _toDoRepository.UpdateAsync(item, ct);
-            }
-        }
-
-        /// <inheritdoc/>
-        public async Task SetConfigurationAsync(int maxTasks, int maxLengthTask, int maxRecipesPerList, CancellationToken ct)
-        {
-            ct.ThrowIfCancellationRequested();
-            _maxTasks = maxTasks;
+            _maxTasksMember = maxTasksMember;
+            _maxTasksAdvanced = maxTasksAdvanced;
             _maxLengthTask = maxLengthTask;
             _maxRecipesPerList = maxRecipesPerList;
             await Task.CompletedTask;

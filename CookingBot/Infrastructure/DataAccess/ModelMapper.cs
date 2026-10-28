@@ -63,13 +63,10 @@ namespace CookingBot.Infrastructure.DataAccess
                 Name = model.Name,
                 Steps = model.Steps.ToList(),
                 CreatedAt = model.CreatedAt,
-                State = model.State,
-                StateChangedAt = model.StateChangedAt,
                 Category = model.Category,
                 Ingredients = model.Ingredients.ToList(),
                 HiddenIngredients = model.HiddenIngredients.ToList(),
-                List = model.List != null ? MapFromModel(model.List) : null,
-                Deadline = model.Deadline
+                List = model.List != null ? MapFromModel(model.List) : null
             };
         }
 
@@ -88,8 +85,6 @@ namespace CookingBot.Infrastructure.DataAccess
                 Id = entity.Id,
                 Name = entity.Name,
                 CreatedAt = entity.CreatedAt,
-                State = entity.State,
-                StateChangedAt = entity.StateChangedAt,
                 Category = entity.Category,
                 Steps = entity.Steps?.ToArray() ?? Array.Empty<string>(),
                 Ingredients = entity.Ingredients?.ToArray() ?? Array.Empty<string>(),
@@ -97,8 +92,7 @@ namespace CookingBot.Infrastructure.DataAccess
                 UserId = entity.User!.UserId,
                 User = entity.User != null ? MapToModel(entity.User) : null!,
                 ListId = entity.List?.Id,
-                List = entity.List != null ? MapToModel(entity.List) : null,
-                Deadline = entity.Deadline
+                List = entity.List != null ? MapToModel(entity.List) : null
             };
         }
 

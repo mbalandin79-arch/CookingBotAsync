@@ -9,13 +9,17 @@ namespace CookingBot.Core.Services
 {
     /// <summary>
     /// Сервис рецептов: бизнес-логика над сущностью ToDoItem
-    /// (проверки лимитов и дубликатов, смена состояния).
+    /// (проверки лимитов и дубликатов, поиск).
     /// Реализация — ToDoService.
     /// </summary>
     public interface IToDoService
     {
         /// <summary>Максимальная длина названия рецепта (из конфигурации).</summary>
         int MaxRecipeNameLength { get; }
+        /// <summary>Возвращает лимит рецептов для роли пользователя.</summary>
+        /// <param name="state">Роль пользователя.</param>
+        /// <returns>Лимит рецептов; null — для Moderator/Admin (без ограничений).</returns>
+        int? GetRecipeLimit(ToDoUser.ToDoUserState state);
 
         /// <summary>
         /// Возвращает все рецепты всех пользователей.
@@ -41,12 +45,6 @@ namespace CookingBot.Core.Services
         /// <returns>Рецепты пользователя.</returns>
         Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct);
 
-        /// <summary>Возвращает рецепты пользователя со статусом Active.</summary>
-        /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="ct">Токен отмены операции.</param>
-        /// <returns>Активные рецепты пользователя.</returns>
-        Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct);
-
         /// <summary>Возвращает рецепт по идентификатору.</summary>
         /// <param name="id">Идентификатор рецепта.</param>
         /// <param name="ct">Токен отмены операции.</param>
@@ -61,7 +59,6 @@ namespace CookingBot.Core.Services
         /// <param name="hiddenIngredients">Скрытые ингредиенты (поиск не возможен).</param>
         /// <param name="steps">Шаги приготовления.</param>
         /// <param name="todoList">Раздел рецепта; null — без раздела.</param>
-        /// <param name="deadline">Дедлайн рецепта (в UTC); null — без дедлайна.</param>
         /// <param name="ct">Токен отмены операции.</param>
         /// <returns>Созданный рецепт.</returns>
         /// <exception cref="ArgumentException">Название пустое или состоит из пробелов.</exception>
@@ -69,15 +66,7 @@ namespace CookingBot.Core.Services
         /// <exception cref="TaskLengthLimitException">Название длиннее допустимого.</exception>
         /// <exception cref="DuplicateTaskException">Рецепт с таким названием у пользователя уже есть.</exception>
         Task<ToDoItem> AddAsync(ToDoUser user, string name, ToDoItem.MainCategory category, List<string> ingredients, List<string> hiddenIngredients, 
-            List<string> steps, ToDoList? todoList, DateTime? deadline, CancellationToken ct);
-
-        /// <summary>
-        /// Переводит рецепт в состояние Completed
-        /// (проставляет StateChangedAt временем смены в UTC); если рецепта нет — ничего не делает.
-        /// </summary>
-        /// <param name="id">Идентификатор рецепта.</param>
-        /// <param name="ct">Токен отмены операции.</param>
-        Task MarkCompletedAsync(Guid id, CancellationToken ct);
+            List<string> steps, ToDoList? todoList, CancellationToken ct);
 
         /// <summary>
         /// Заменяет шаги приготовления рецепта одним текстом;
@@ -95,11 +84,12 @@ namespace CookingBot.Core.Services
         Task DeleteAsync(Guid id, CancellationToken ct);
 
         /// <summary>Задаёт ограничения для рецептов.</summary>
-        /// <param name="maxTasks">Максимальное количество активных рецептов на пользователя.</param>
+        /// <param name="maxTasksMember">Максимальное количество рецептов на пользователя с ролью Member.</param>
+        /// <param name="maxTasksAdvanced">Максимальное количество рецептов на пользователя с ролью Advanced.</param>
         /// <param name="maxLengthTask">Максимальная длина названия рецепта.</param>
         /// <param name="maxRecipesPerList">Максимальное количество рецептов в разделе.</param>
         /// <param name="ct">Токен отмены операции.</param>
-        Task SetConfigurationAsync(int maxTasks, int maxLengthTask, int maxRecipesPerList, CancellationToken ct);
+        Task SetConfigurationAsync(int maxTasksMember, int maxTasksAdvanced, int maxLengthTask, int maxRecipesPerList, CancellationToken ct);
 
         /// <summary>
         /// Возвращает рецепты пользователя, названия которых начинаются

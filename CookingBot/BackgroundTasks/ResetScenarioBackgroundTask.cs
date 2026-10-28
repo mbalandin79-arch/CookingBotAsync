@@ -56,7 +56,7 @@ namespace CookingBot.BackgroundTasks
                 // Состав кнопок клавиатуры зависит от роли пользователя
                 var user = await _userService.GetUserAsync(context.UserId, ct);
 
-                // Как при ручной отмене (/cancel): убираем кнопку "Отмена"
+                // Как при ручной отмене (текст «Отмена»): убираем кнопку "Отмена"
                 // и показываем главное меню по роли пользователя
                 await _bot.SendMessage(new ChatId(context.UserId),
                     $"Сценарий отменен, так как не поступил ответ в течение {_resetScenarioTimeout}",

@@ -62,7 +62,8 @@ namespace CookingBot.TelegramBot
 
             var adminOnly = data is "admin_promote_mod" or "admin_promote_admin" or
                 "admin_demote_advanced" or "admin_demote_mod" or "admin_limits" or
-                "config_MaxTasks" or "config_MaxLengthTask" or "config_MaxListsPerUser" or
+                "config_MaxTasksMember" or "config_MaxTasksAdvanced" or "config_MaxLengthTask" or
+                "config_MaxListsPerUserMember" or "config_MaxListsPerUserAdvanced" or
                 "config_MaxRecipesPerList";
 
             if (adminOnly && user.State != ToDoUser.ToDoUserState.Admin)
@@ -78,18 +79,6 @@ namespace CookingBot.TelegramBot
                     await ListUsersAsync(telegramBotClient, chat, ct);
                     await SendMainMenuAsync(telegramBotClient, chat, userId, ct);
                     break;
-                case "mod_promote_member":
-                    {
-                        var prompt = "Выберите пользователя для повышения до Member:";
-                        await ShowUserListForStateChangeAsync(telegramBotClient, chat, "setstate_member", prompt, ct);
-                        break;
-                    }
-                case "mod_demote_guest":
-                    {
-                        var prompt = "Выберите пользователя для понижения до Guest:";
-                        await ShowUserListForStateChangeAsync(telegramBotClient, chat, "setstate_guest", prompt, ct);
-                        break;
-                    }
                 case "admin_promote_mod":
                     {
                         var prompt = "Выберите пользователя для повышения до Moderator:";
@@ -120,9 +109,11 @@ namespace CookingBot.TelegramBot
                 case "admin_cleanup_locks":
                     await CleanupGuestLocksAsync(telegramBotClient, chat, ct);
                     break;
-                case "config_MaxTasks":
+                case "config_MaxTasksMember":
+                case "config_MaxTasksAdvanced":
                 case "config_MaxLengthTask":
-                case "config_MaxListsPerUser":
+                case "config_MaxListsPerUserMember":
+                case "config_MaxListsPerUserAdvanced":
                 case "config_MaxRecipesPerList":
                     {
                         _configLimitTargets[userId] = data.Substring("config_".Length);
@@ -145,12 +136,14 @@ namespace CookingBot.TelegramBot
         private async Task ShowLimitsAsync(ITelegramBotClient telegramBotClient, Chat chat,
             CancellationToken ct)
         {
-            var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(_settingsPath);
+            var (maxTasksMember, maxTasksAdvanced, maxLengthTask, maxListsPerUserMember, maxListsPerUserAdvanced, maxRecipesPerList) = AppConfig.ReadLimits(_settingsPath);
             var str = new StringBuilder();
             str.AppendLine(" Текущие лимиты:");
-            str.AppendLine($" MaxTasks: {maxTasks}");
+            str.AppendLine($" MaxTasksMember: {maxTasksMember}");
+            str.AppendLine($" MaxTasksAdvanced: {maxTasksAdvanced}");
             str.AppendLine($" MaxLengthTask: {maxLengthTask}");
-            str.AppendLine($" MaxListsPerUser: {maxListsPerUser}");
+            str.AppendLine($" MaxListsPerUserMember: {maxListsPerUserMember}");
+            str.AppendLine($" MaxListsPerUserAdvanced: {maxListsPerUserAdvanced}");
             str.AppendLine($" MaxRecipesPerList: {maxRecipesPerList}");
             await telegramBotClient.SendMessage(chat, str.ToString(),
                 replyMarkup: Keyboards.BuildLimitsKeyboard(), cancellationToken: ct);
@@ -202,7 +195,7 @@ namespace CookingBot.TelegramBot
 
         /// <summary>
         /// Меняет роль пользователя по кнопке «setstate_роль_UserId»:
-        /// проверка прав вызывающего (Moderator — только Guest/Member;
+        /// проверка прав вызывающего (Moderator — только Member;
         /// Advanced/Moderator/Admin — только Admin), затем ChangeStateAsync.
         /// </summary>
         /// <param name="telegramBotClient">Клиент Telegram.</param>
@@ -227,12 +220,11 @@ namespace CookingBot.TelegramBot
 
             ToDoUser.ToDoUserState targetState = stateName switch
             {
-                "guest" => ToDoUser.ToDoUserState.Guest,
                 "member" => ToDoUser.ToDoUserState.Member,
                 "advanced" => ToDoUser.ToDoUserState.Advanced,
                 "moderator" => ToDoUser.ToDoUserState.Moderator,
                 "admin" => ToDoUser.ToDoUserState.Admin,
-                _ => ToDoUser.ToDoUserState.Guest
+                _ => ToDoUser.ToDoUserState.Member
             };
 
             var adminUser = await _userService.GetUserAsync(adminUserId, ct);
@@ -261,7 +253,13 @@ namespace CookingBot.TelegramBot
             var prompt = $" Пользователь \"{userName}\" теперь имеет статус: {ToDoUser.GetStateName(targetState)}";
             await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
 
-
+            // Персональное меню ☰ ЦЕЛЕВОГО пользователя под новую роль.
+            // scope обязателен: без него меню переписалось бы ВСЕМ пользователям.
+            if (targetUser != null)
+            {
+                await telegramBotClient.SetMyCommands(Keyboards.GetCommandsForUser(targetUser),
+                    scope: new BotCommandScopeChat { ChatId = targetUser.TelegramUserId }, cancellationToken: ct);
+            }
         }
 
         /// <summary>
@@ -293,9 +291,9 @@ namespace CookingBot.TelegramBot
             root[targetName] = value;
             await File.WriteAllTextAsync(_settingsPath, root.ToString(), ct);
 
-            var (maxTasks, maxLengthTask, maxListsPerUser, maxRecipesPerList) = AppConfig.ReadLimits(_settingsPath);
-            await _todoService.SetConfigurationAsync(maxTasks, maxLengthTask, maxRecipesPerList, ct);
-            await _toDoListService.SetConfigurationAsync(maxListsPerUser, ct);
+            var (maxTasksMember, maxTasksAdvanced, maxLengthTask, maxListsPerUserMember, maxListsPerUserAdvanced, maxRecipesPerList) = AppConfig.ReadLimits(_settingsPath);
+            await _todoService.SetConfigurationAsync(maxTasksMember, maxTasksAdvanced, maxLengthTask, maxRecipesPerList, ct);
+            await _toDoListService.SetConfigurationAsync(maxListsPerUserMember, maxListsPerUserAdvanced, ct);
 
             var prompt = $"{targetName} = {value}. Лимит обновлён.";
             await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);

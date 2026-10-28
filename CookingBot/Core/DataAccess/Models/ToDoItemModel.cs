@@ -42,14 +42,6 @@ namespace CookingBot.Core.DataAccess.Models
         [Column("CreatedAt")]
         public DateTime CreatedAt { get; set; }
 
-        /// <summary>Состояние рецепта (в работе / завершён).</summary>
-        [Column("State")]
-        public ToDoItemState State { get; set; }
-
-        /// <summary>Дата и время смены состояния (UTC); null, если состояние не менялось.</summary>
-        [Column("StateChangedAt")]
-        public DateTime? StateChangedAt { get; set; }
-
         /// <summary>Категория рецепта — раздел кулинарной книги.</summary>
         [Column("Category")]
         public MainCategory Category { get; set; }
@@ -69,9 +61,5 @@ namespace CookingBot.Core.DataAccess.Models
         /// <summary>Раздел рецепта (ассоциация по ListId; заполняется при LoadWith; null — без раздела).</summary>
         [Association(ThisKey = nameof(ListId), OtherKey = nameof(ToDoListModel.Id))]
         public ToDoListModel? List { get; set; }
-
-        /// <summary>Дедлайн рецепта (в UTC); null — дедлайн не задан.</summary>
-        [Column("Deadline")]
-        public DateTime? Deadline { get; set; }
     }
 }

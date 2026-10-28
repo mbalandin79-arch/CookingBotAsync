@@ -37,11 +37,11 @@ namespace CookingBot.Infrastructure.DataAccess
         }
 
         /// <inheritdoc/>
-        public async Task<int> CountActiveAsync(Guid userId, CancellationToken ct)
+        public async Task<int> CountAsync(Guid userId, CancellationToken ct)
         {
             using var dbContext = _factory.CreateDataContext();
 
-            var answer = await dbContext.ToDoItems.CountAsync(c => c.UserId == userId && c.State == ToDoItem.ToDoItemState.Active, ct);
+            var answer = await dbContext.ToDoItems.CountAsync(c => c.UserId == userId, ct);
 
             return answer;
         }
@@ -110,26 +110,6 @@ namespace CookingBot.Infrastructure.DataAccess
             var part = namePart.ToLower();
 
             var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.Name.ToLower().Contains(part)).OrderBy(o => o.CreatedAt).ToListAsync(ct);
-
-            return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
-        }
-
-        /// <inheritdoc/>
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct)
-        {
-            using var dbContext = _factory.CreateDataContext();
-
-            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.UserId == userId && w.State == ToDoItem.ToDoItemState.Active).OrderBy(o => o.CreatedAt).ToListAsync(ct);
-
-            return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
-        }
-
-        /// <inheritdoc/>
-        public async Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct)
-        {
-            using var dbContext = _factory.CreateDataContext();
-
-            var models = await dbContext.ToDoItems.LoadWith(l => l.User).LoadWith(l => l.List).LoadWith(l => l.List!.User).Where(w => w.UserId == userId && w.State == ToDoItem.ToDoItemState.Active && w.Deadline != null && w.Deadline >= from && w.Deadline < to).OrderBy(o => o.CreatedAt).ToListAsync(ct);
 
             return models.Select(s => ModelMapper.MapFromModel(s)).ToList();
         }

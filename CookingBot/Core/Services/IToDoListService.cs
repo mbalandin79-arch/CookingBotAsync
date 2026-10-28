@@ -44,9 +44,17 @@ namespace CookingBot.Core.Services
         /// <returns>Разделы пользователя (может быть пустой список).</returns>
         Task<IReadOnlyList<ToDoList>> GetUserListsAsync(Guid userId, CancellationToken ct);
 
-        /// <summary>Устанавливает максимальное количество разделов на пользователя.</summary>
-        /// <param name="maxListsPerUser">Максимальное количество разделов.</param>
+        /// <summary>
+        /// Возвращает лимит разделов для роли пользователя.
+        /// </summary>
+        /// <param name="state">Роль пользователя.</param>
+        /// <returns>Лимит разделов; null — для Moderator/Admin (без ограничений).</returns>
+        int? GetListLimit(ToDoUser.ToDoUserState state);
+
+        /// <summary>Задаёт максимальное количество разделов на пользователя (по ролям).</summary>
+        /// <param name="maxListsPerUserMember">Максимальное количество разделов для роли Member.</param>
+        /// <param name="maxListsPerUserAdvanced">Максимальное количество разделов для роли Advanced.</param>
         /// <param name="ct">Токен отмены операции.</param>
-        Task SetConfigurationAsync(int maxListsPerUser, CancellationToken ct);
+        Task SetConfigurationAsync(int maxListsPerUserMember, int maxListsPerUserAdvanced, CancellationToken ct);
     }
 }

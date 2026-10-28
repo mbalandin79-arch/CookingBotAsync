@@ -99,7 +99,7 @@ namespace CookingBot.Core.Services
                     TelegramUserId = telegramUserId,
                     TelegramUserName = telegramUserName,
                     RegisteredAt = DateTime.UtcNow,
-                    State = ToDoUser.ToDoUserState.Guest
+                    State = ToDoUser.ToDoUserState.Member
                 };
 
                 var allUsers = await _userRepository.GetAllUsersAsync(ct);

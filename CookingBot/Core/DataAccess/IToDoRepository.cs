@@ -36,25 +36,6 @@ namespace CookingBot.Core.DataAccess
         /// <returns>Рецепты пользователя, упорядоченные по дате создания.</returns>
         Task<IReadOnlyList<ToDoItem>> GetAllByUserIdAsync(Guid userId, CancellationToken ct);
 
-        /// <summary>Возвращает рецепты пользователя со статусом Active.</summary>
-        /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="ct">Токен отмены операции.</param>
-        /// <returns>Активные рецепты пользователя, упорядоченные по дате создания.</returns>
-        Task<IReadOnlyList<ToDoItem>> GetActiveByUserIdAsync(Guid userId, CancellationToken ct);
-
-        /// <summary>
-        /// Возвращает активные рецепты пользователя, у которых дедлайн
-        /// попадает в интервал [from, to). Рецепты без дедлайна (Deadline = null)
-        /// не возвращаются. Используется фоновыми задачами: 
-        /// поиск просроченных дедлайнов и рецептов «на сегодня».
-        /// </summary>
-        /// <param name="userId">Идентификатор пользователя.</param>
-        /// <param name="from">Начало интервала (включительно), в UTC.</param>
-        /// <param name="to">Конец интервала (не включительно), в UTC.</param>
-        /// <param name="ct">Токен отмены операции.</param>
-        /// <returns>Активные рецепты пользователя с дедлайном в интервале, упорядоченные по дате создания.</returns>
-        Task<IReadOnlyList<ToDoItem>> GetActiveWithDeadline(Guid userId, DateTime from, DateTime to, CancellationToken ct);
-
         /// <summary>
         /// Возвращает рецепты пользователя, удовлетворяющие предикату.
         /// Предикат вычисляется в памяти (не транслируется в SQL).
@@ -93,11 +74,11 @@ namespace CookingBot.Core.DataAccess
         /// <returns>true, если рецепт с таким названием у пользователя есть.</returns>
         Task<bool> ExistsByNameAsync(Guid userId, string name, CancellationToken ct);
 
-        /// <summary>Возвращает количество активных рецептов у пользователя.</summary>
+        /// <summary>Возвращает количество рецептов у пользователя.</summary>
         /// <param name="userId">Идентификатор пользователя.</param>
         /// <param name="ct">Токен отмены операции.</param>
-        /// <returns>Количество рецептов со статусом Active.</returns>
-        Task<int> CountActiveAsync(Guid userId, CancellationToken ct);
+        /// <returns>Количество рецептов пользователя.</returns>
+        Task<int> CountAsync(Guid userId, CancellationToken ct);
 
         /// <summary>Поиск по всем рецептам по ингредиенту (список Ingredients), без учёта регистра.</summary>
         /// <param name="ingredient">Ингредиент для поиска.</param>

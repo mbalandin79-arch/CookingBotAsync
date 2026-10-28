@@ -8,8 +8,8 @@ namespace CookingBot.Core.Entities
 {
     /// <summary>
     /// Запланированное уведомление (нотификация) для пользователя бота.
-    /// Создаётся фоновыми задачами (по просроченным дедлайнам и задачам на день),
-    /// а отправляется пользователю в Telegram задачей NotificationBackgroundTask.
+    /// Создаётся фоновыми задачами, а отправляется пользователю в Telegram
+    /// задачей NotificationBackgroundTask.
     /// </summary>
     public class Notification
     {
@@ -21,7 +21,7 @@ namespace CookingBot.Core.Entities
 
         /// <summary>
         /// Тип нотификации, защита от дублей (одна запись на пару пользователь+тип).
-        /// Например: DeadLine_{Id рецепта}, Today_{дата}.
+        /// Например: Daily_{дата} — «Рецепт дня» (планируемая задача).
         /// </summary>
         public string Type { get; set; } = null!;
 

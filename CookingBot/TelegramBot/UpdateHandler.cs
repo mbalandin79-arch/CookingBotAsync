@@ -160,7 +160,7 @@ namespace CookingBot.TelegramBot
 
                 var text = message.Text;
 
-                if (text == "/cancel" || text == "Отмена")
+                if (text == "Отмена")
                 {
                     await CancelScenarioAsync(telegramBotClient, message.Chat, userId.Value, ct);
                     return;
@@ -203,7 +203,7 @@ namespace CookingBot.TelegramBot
         /// <returns>true, если текст — команда бота.</returns>
         private static bool IsBotCommand(string text)
         {
-            var commands = new[] { "/start", "/cook", "/my", "/info", "/help", "/exit", "/admin" };
+            var commands = new[] { "/start", "/cook", "/my", "/help", "/exit", "/admin" };
             return commands.Contains(text);
         }
 

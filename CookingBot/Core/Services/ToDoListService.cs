@@ -16,7 +16,8 @@ namespace CookingBot.Core.Services
     public class ToDoListService : IToDoListService
     {
         private readonly IToDoListRepository _toDoListRepository;
-        private int _maxListsPerUser = 10;
+        private int _maxListsPerUserMember = 10;
+        private int _maxListsPerUserAdvanced = 20;
 
         /// <summary>Максимальная длина названия раздела.</summary>
         public const int MaxListNameLength = 30;
@@ -67,10 +68,16 @@ namespace CookingBot.Core.Services
 
             CheckLengthLimits(name);
             await CheckDuplicateAsync(user.UserId, name, ct);
-            var existingLists = await _toDoListRepository.GetByUserIdAsync(user.UserId, ct);
-            if (existingLists.Count >= _maxListsPerUser)
+
+            // Лимит разделов зависит от роли; Moderator/Admin — без ограничений
+            if (user.State != ToDoUser.ToDoUserState.Moderator && user.State != ToDoUser.ToDoUserState.Admin)
             {
-                throw new ListCountLimitException(_maxListsPerUser);
+                int limit = user.State == ToDoUser.ToDoUserState.Advanced ? _maxListsPerUserAdvanced : _maxListsPerUserMember;
+                var existingLists = await _toDoListRepository.GetByUserIdAsync(user.UserId, ct);
+                if (existingLists.Count >= limit)
+                {
+                    throw new ListCountLimitException(limit);
+                }
             }
 
             var list = new ToDoList
@@ -113,10 +120,20 @@ namespace CookingBot.Core.Services
         }
 
         /// <inheritdoc/>
-        public async Task SetConfigurationAsync(int maxListsPerUser, CancellationToken ct)
+        public int? GetListLimit(ToDoUser.ToDoUserState state)
+        {
+            if (state == ToDoUser.ToDoUserState.Moderator || state == ToDoUser.ToDoUserState.Admin)
+                return null;
+
+            return state == ToDoUser.ToDoUserState.Advanced ? _maxListsPerUserAdvanced : _maxListsPerUserMember;
+        }
+
+        /// <inheritdoc/>
+        public async Task SetConfigurationAsync(int maxListsPerUserMember, int maxListsPerUserAdvanced, CancellationToken ct)
         {
             ct.ThrowIfCancellationRequested();
-            _maxListsPerUser = maxListsPerUser;
+            _maxListsPerUserMember = maxListsPerUserMember;
+            _maxListsPerUserAdvanced = maxListsPerUserAdvanced;
             await Task.CompletedTask;
         }
     }

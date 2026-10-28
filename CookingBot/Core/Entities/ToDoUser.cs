@@ -12,20 +12,21 @@ namespace CookingBot.Core.Entities
     {
         /// <summary>
         /// Уровень доступа пользователя: определяет набор доступных команд
-        /// (BotCommand-меню и главное меню строятся по роли).
+        /// (BotCommand-меню и главное меню строятся по роли) и лимиты
+        /// (рецепты, разделы; Moderator/Admin — без ограничений).
+        /// Номера совпадают со значениями в базе данных
+        /// (CHECK "State" BETWEEN 1 AND 4).
         /// </summary>
         public enum ToDoUserState
         {
-            /// <summary>Гость.</summary>
-            Guest,
             /// <summary>Участник.</summary>
-            Member,
+            Member = 1,
             /// <summary>Активный участник.</summary>
-            Advanced,
+            Advanced = 2,
             /// <summary>Модератор.</summary>
-            Moderator,
+            Moderator = 3,
             /// <summary>Администратор.</summary>
-            Admin
+            Admin = 4
         }
         /// <summary>Уникальный идентификатор пользователя (первичный ключ в БД).</summary>
         public Guid UserId { get; set; }
@@ -47,7 +48,6 @@ namespace CookingBot.Core.Entities
         {
             return state switch
             {
-                ToDoUserState.Guest => "Гость",
                 ToDoUserState.Member => "Участник",
                 ToDoUserState.Advanced => "Активный участник",
                 ToDoUserState.Moderator => "Модератор",

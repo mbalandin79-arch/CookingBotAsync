@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -73,7 +72,7 @@ namespace CookingBot.TelegramBot.Scenarios
                         return ScenarioResult.Transition;
                     }
 
-                // Шаг 2: Дедлайн
+                // Шаг 2: (разбор ответа): название рецепта
                 case "Name":
                     {
                         var name = update.Message?.Text;
@@ -92,46 +91,6 @@ namespace CookingBot.TelegramBot.Scenarios
                             return ScenarioResult.Transition;
                         }
                         context.Data["name"] = name;
-
-                        await telegramBotClient.SendMessage(chat, "Введите дедлайн — дату, когда планируете приготовить блюдо,\nв формате ДД.ММ.ГГГГ.\nМожно пропустить.", replyMarkup: Keyboards.BuildSkipKeyboard(), cancellationToken: ct);
-                        context.CurrentStep = "Deadline";
-                        return ScenarioResult.Transition;
-                    }
-
-                // Шаг 3 (разбор ответа): дедлайн или «Пропустить»
-                case "Deadline":
-                    {
-                        DateTime? deadline = null;
-
-                        if (update.CallbackQuery?.Data == "cat_skip")
-                        {
-                            // кнопка «Пропустить» — дедлайна нет
-                            deadline = null;
-                        }
-                        else
-                        {
-                            var deadlineText = update.Message?.Text;
-                            if (!string.IsNullOrWhiteSpace(deadlineText))
-                            {
-                                // принимаем дату в формате ДД.ММ.ГГГГ (допускаем однозначные числа)
-                                if (!DateTime.TryParseExact(deadlineText.Trim(), new[] { "dd.MM.yyyy", "d.M.yyyy" },
-                                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsedDate))
-                                {
-                                    await telegramBotClient.SendMessage(chat, "Не удалось распознать дату. Введите дедлайн в формате ДД.ММ.ГГГГ или нажмите \"Пропустить\":", cancellationToken: ct);
-                                    return ScenarioResult.Transition;
-                                }
-
-                                // введённая дата трактуется как UTC (без времени суток)
-                                deadline = DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Utc);
-                            }
-                        }
-
-                        // если дедлайна нет — ключ не добавляем (в Dictionary<string, object>
-                        // значения-ссылки не должны быть null); при чтении — TryGetValue
-                        if (deadline != null)
-                        {
-                            context.Data["deadline"] = deadline;
-                        }
 
                         await telegramBotClient.SendMessage(chat, "Выберите категорию:", replyMarkup: Keyboards.BuildCategoryKeyboard(), cancellationToken: ct);
                         context.CurrentStep = "Category";
@@ -371,15 +330,10 @@ namespace CookingBot.TelegramBot.Scenarios
             var hiddenIngredients = (List<string>)context.Data["hiddenIngredients"];
             var steps = (List<string>)context.Data["steps"];
             var list = (ToDoList?)context.Data["list"];
-            DateTime? deadline = null;
-            if (context.Data.TryGetValue("deadline", out var deadlineValue))
-            {
-                deadline = (DateTime?)deadlineValue;
-            }
 
             try
             {
-                var item = await _todoService.AddAsync(toDoUser, taskName, category, ingredients, hiddenIngredients, steps, list, deadline, ct);
+                var item = await _todoService.AddAsync(toDoUser, taskName, category, ingredients, hiddenIngredients, steps, list, ct);
 
                 var str = new StringBuilder();
                 str.AppendLine("Рецепт добавлен:");
@@ -390,8 +344,6 @@ namespace CookingBot.TelegramBot.Scenarios
                 str.AppendLine($" Ingredients: {string.Join(", ", item.Ingredients)}");
                 str.AppendLine($" HiddenIngredients: {(item.HiddenIngredients.Count > 0 ? string.Join(", ", item.HiddenIngredients) : "-")}");
                 str.AppendLine($" Steps: {item.Steps.Count}");
-                str.AppendLine($" State: {ToDoItem.GetStateName(item.State)}");
-                str.AppendLine($" Deadline: {(item.Deadline != null ? item.Deadline.Value.ToString("dd.MM.yyyy") : "-")}");
                 await telegramBotClient.SendMessage(chat, str.ToString(), cancellationToken: ct);
                 return ScenarioResult.Completed;
             }

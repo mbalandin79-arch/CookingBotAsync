@@ -32,8 +32,6 @@ namespace CookingBot.TelegramBot
                 new BotCommand { Command = "/start", Description = "Начать работу" },
                 new BotCommand { Command = "/cook", Description = "Рецепты" },
                 new BotCommand { Command = "/help", Description = "Помощь" },
-                new BotCommand { Command = "/info", Description = "О боте"},
-                new BotCommand { Command = "/cancel", Description = "Отменить текущий сценарий"},
                 new BotCommand { Command = "/exit", Description = "Завершить сессию" },
             };
 
@@ -93,8 +91,10 @@ namespace CookingBot.TelegramBot
 
         /// <summary>
         /// Собирает клавиатуру меню администрирования: список пользователей,
-        /// повышение/понижение ролей (для Moderator — только Member/Guest,
-        /// для Admin — вплоть до Admin), лимиты, очистка журнала активности.
+        /// повышение/понижение ролей (только Admin — вплоть до Admin),
+        /// лимиты. Moderator до внедрения экрана пользователя управляет
+        /// только списком. Кнопка «Очистка журнала активности» временная:
+        /// заменяется фоновой задачей чистки (п.2 плана).
         /// </summary>
         /// <param name="state">Роль вызывающего (определяет набор кнопок).</param>
         /// <returns>Клавиатура меню администрирования.</returns>
@@ -102,12 +102,7 @@ namespace CookingBot.TelegramBot
         {
             var rows = new List<List<InlineKeyboardButton>>();
 
-            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Список пользователей", "mod_listusers") });
-            rows.Add(new()
-            {
-                InlineKeyboardButton.WithCallbackData("Повысить до Member", "mod_promote_member"),
-                InlineKeyboardButton.WithCallbackData("Понизить до Guest", "mod_demote_guest")
-            });            
+            rows.Add(new() { InlineKeyboardButton.WithCallbackData("Список пользователей", "mod_listusers") });           
 
             if (state == ToDoUser.ToDoUserState.Admin)
             {
@@ -312,9 +307,11 @@ namespace CookingBot.TelegramBot
         {
             return new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData("MaxTasks", "config_MaxTasks") },
+                new[] { InlineKeyboardButton.WithCallbackData("MaxTasksMember", "config_MaxTasksMember") },
+                new[] { InlineKeyboardButton.WithCallbackData("MaxTasksAdvanced", "config_MaxTasksAdvanced") },
                 new[] { InlineKeyboardButton.WithCallbackData("MaxLengthTask", "config_MaxLengthTask") },
-                new[] { InlineKeyboardButton.WithCallbackData("MaxListsPerUser", "config_MaxListsPerUser") },
+                new[] { InlineKeyboardButton.WithCallbackData("MaxListsPerUserMember", "config_MaxListsPerUserMember") },
+                new[] { InlineKeyboardButton.WithCallbackData("MaxListsPerUserAdvanced", "config_MaxListsPerUserAdvanced") },
                 new[] { InlineKeyboardButton.WithCallbackData("MaxRecipesPerList", "config_MaxRecipesPerList") },
                 new[] { InlineKeyboardButton.WithCallbackData("Назад", "mainmenu") }
             });
@@ -427,7 +424,7 @@ namespace CookingBot.TelegramBot
 
         /// <summary>
         /// Собирает клавиатуру действий с рецептом (карточка рецепта):
-        /// «Выполнить» (completetask), «Удалить» (deletetask), назад.
+        /// «Удалить» (deletetask), назад.
         /// </summary>
         /// <param name="taskId">Идентификатор рецепта.</param>
         /// <returns>Клавиатура действий с рецептом.</returns>
@@ -435,7 +432,6 @@ namespace CookingBot.TelegramBot
         {
             return new InlineKeyboardMarkup(new[]
             {
-                new[] { InlineKeyboardButton.WithCallbackData("✅Выполнить", new ToDoItemCallbackDto { Action = "completetask", ToDoItemId = taskId }.ToString()) },
                 new[] { InlineKeyboardButton.WithCallbackData("❌Удалить", new ToDoItemCallbackDto { Action = "deletetask", ToDoItemId = taskId }.ToString()) },
                 new[] { InlineKeyboardButton.WithCallbackData("Назад", "mainmenu") }
             });

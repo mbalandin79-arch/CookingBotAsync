@@ -17,7 +17,7 @@ namespace CookingBot.TelegramBot
         /// Точка входа всех callback-запросов (нажатий inline-кнопок):
         /// при активном сценарии передаёт нажатие в сценарий; «deletetask|»
         /// запускает сценарий удаления рецепта (с проверкой владельца);
-        /// «showtask|»/«completetask|» → HandleTaskCallbackAsync; остальное →
+        /// «showtask|» → HandleTaskCallbackAsync; остальное →
         /// HandleCallbackSwitchAsync.
         /// </summary>
         /// <param name="telegramBotClient">Клиент Telegram.</param>
@@ -68,8 +68,7 @@ namespace CookingBot.TelegramBot
                 return;
             }
 
-            // task-команды (showtask/completetask)
-            if (data.StartsWith("showtask|") || data.StartsWith("completetask|"))
+            if (data.StartsWith("showtask|"))
             {
                 await HandleTaskCallbackAsync(telegramBotClient, data, chat, userId, ct);
                 return;
@@ -155,17 +154,17 @@ namespace CookingBot.TelegramBot
                     await ShowListsAsync(telegramBotClient, chat, userId, ct);
                     break;
                 case "mod_listusers":
-                case "mod_promote_member":
-                case "mod_demote_guest":
                 case "admin_promote_mod":
                 case "admin_promote_admin":
                 case "admin_demote_advanced":
                 case "admin_demote_mod":
                 case "admin_limits":
                 case "admin_cleanup_locks":
-                case "config_MaxTasks":
+                case "config_MaxTasksMember":
+                case "config_MaxTasksAdvanced":
                 case "config_MaxLengthTask":
-                case "config_MaxListsPerUser":
+                case "config_MaxListsPerUserMember":
+                case "config_MaxListsPerUserAdvanced":
                 case "config_MaxRecipesPerList":
                     await HandleAdminCallbackAsync(telegramBotClient, data, chat, userId, ct);
                     break;
@@ -244,9 +243,8 @@ namespace CookingBot.TelegramBot
         }
 
         /// <summary>
-        /// Обрабатывает команды с параметрами: pipe-разделённые (show|, showall|,
-        /// show_completed| — постраничный показ) и underscore-префиксы
-        /// (SetState, ChangeName, DeleteAccount, ConfirmDelete, Profile,
+        /// Обрабатывает команды с параметрами: pipe-разделённые (show|, showall|) 
+        /// и underscore-префиксы (SetState, ChangeName, DeleteAccount, ConfirmDelete, Profile,
         /// ShowReport — по enum PrefixedCommand).
         /// </summary>
         /// <param name="telegramBotClient">Клиент Telegram.</param>
@@ -267,11 +265,6 @@ namespace CookingBot.TelegramBot
             if (data.StartsWith("showall|"))
             {
                 await HandleShowAllAsync(telegramBotClient, data, chat, messageId, ct);
-                return;
-            }
-            if (data.StartsWith("show_completed|"))
-            {
-                await HandleShowCompletedAsync(telegramBotClient, data, chat, userId, messageId, ct);
                 return;
             }
 
@@ -319,6 +312,10 @@ namespace CookingBot.TelegramBot
 
                             var prompt = "Аккаунт и все ваши данные удалены.";
                             await telegramBotClient.SendMessage(chat, prompt, cancellationToken: ct);
+
+                            // Возврат гостевого меню ☰: пользователь больше не зарегистрирован.
+                            await telegramBotClient.SetMyCommands(Keyboards.GetCommandsForUser(null),
+                                scope: new BotCommandScopeChat { ChatId = userId }, cancellationToken: ct);
                         }
                         catch (Exception ex)
                         {
