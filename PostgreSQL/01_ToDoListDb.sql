@@ -15,6 +15,12 @@
 --
 -- Примечание: двойные кавычки вокруг имён таблиц, столбцов и
 -- индексов сохраняют регистр букв.
+--
+-- СХЕМА СООТВЕТСТВУЕТ РЕЛИЗНОЙ ВЕРСИИ КОДА: роль Guest удалена
+-- (остались 1-4, см. CHECK ниже), у рецепта больше нет статуса
+-- (State/StateChangedAt) и дедлайна (Deadline). Для обновления
+-- уже развёрнутой базы без пересоздания используйте
+-- 04_ReleaseMigration.sql.
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -39,9 +45,12 @@ CREATE TABLE "ToDoUser"
     "TelegramUserId"   BIGINT      NOT NULL,  -- Id пользователя в Telegram (long)
     "TelegramUserName" TEXT        NOT NULL,  -- отображаемое имя
     "RegisteredAt"     TIMESTAMPTZ NOT NULL,  -- дата регистрации (в UTC)
-    "State"            INT         NOT NULL,  -- роль: 0=Guest, 1=Member, 2=Advanced, 3=Moderator, 4=Admin
+    "State"            INT         NOT NULL,  -- роль: 1=Member, 2=Advanced, 3=Moderator, 4=Admin (Guest удалён из релиза)
 
-    CONSTRAINT "PK_ToDoUser" PRIMARY KEY ("UserId")
+    CONSTRAINT "PK_ToDoUser" PRIMARY KEY ("UserId"),
+    -- База сама не даст завести роль вне диапазона 1-4
+    -- (страховка от опечаток в коде и ручных правок в БД).
+    CONSTRAINT "CK_ToDoUser_State" CHECK ("State" BETWEEN 1 AND 4)
 );
 
 -- Списки рецептов / подкатегории (из сущности ToDoList)
@@ -62,8 +71,6 @@ CREATE TABLE "ToDoItem"
     "Name"              TEXT        NOT NULL,  -- название рецепта
     "Steps"             TEXT[]      NOT NULL,  -- шаги приготовления (список строк)
     "CreatedAt"         TIMESTAMPTZ NOT NULL,  -- дата создания (в UTC)
-    "State"             INT         NOT NULL,  -- состояние: 0=Active, 1=Completed (ToDoItemState)
-    "StateChangedAt"    TIMESTAMPTZ NULL,      -- когда изменилось состояние (NULL - не менялось)
     "Category"          INT         NOT NULL,  -- категория (MainCategory):
                                                --   0=Other, 1=Soup, 2=Salat, 3=Main, 4=Dessert,
                                                --   5=Drink, 6=Bakery, 7=Breakfast, 8=Sauce
@@ -71,7 +78,6 @@ CREATE TABLE "ToDoItem"
     "HiddenIngredients" TEXT[]      NOT NULL,  -- скрытые ингредиенты (поиск недоступен)
     "UserId"            UUID        NOT NULL,  -- автор рецепта -> "ToDoUser"."UserId"
     "ListId"            UUID        NULL,      -- список (подкатегория) -> "ToDoList"."Id"; NULL = без списка
-    "Deadline"          TIMESTAMPTZ NULL,      -- дедлайн рецепта, дата планируемого приготовления (NULL = нет дедлайна)
 
     CONSTRAINT "PK_ToDoItem" PRIMARY KEY ("Id")
 );

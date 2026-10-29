@@ -1,8 +1,12 @@
 -- ============================================================
 -- ToDoListDb_Select.sql
 -- SQL-скрипты для методов интерфейса IToDoRepository,
--- которые выбирают данные.
+-- которые выбирают данные, и справочные запросы по нотификациям.
 -- СУБД: PostgreSQL 18
+--
+-- Соответствует РЕЛИЗНОЙ версии кода: выборки по статусу
+-- (GetActiveByUserIdAsync, CountActiveAsync) и дедлайну
+-- (GetActiveWithDeadline) удалены вместе с этими методами.
 --
 -- Как запускать:
 --   Подключитесь к базе "ToDoList", где выполнены 01_ToDoListDb.sql
@@ -27,12 +31,6 @@ SELECT * FROM "ToDoItem"
 WHERE "UserId" = '00000000-0000-0000-0000-000000000001'
 ORDER BY "CreatedAt";
 
--- GetActiveByUserIdAsync(userId): только активные рецепты пользователя
-SELECT * FROM "ToDoItem"
-WHERE "UserId" = '00000000-0000-0000-0000-000000000001'
-  AND "State" = 0
-ORDER BY "CreatedAt";
-
 -- GetAsync(id): один рецепт по Id (Сырники)
 SELECT * FROM "ToDoItem"
 WHERE "Id" = '00000000-0000-0000-0002-000000000001';
@@ -46,11 +44,11 @@ SELECT EXISTS (
       AND lower("Name") = lower('сырники')
 ) AS "Существует";
 
--- CountActiveAsync(userId): число активных рецептов пользователя
-SELECT count(*) AS "Активных"
+-- CountAsync(userId): число рецептов пользователя
+-- (используется при проверке лимита по роли)
+SELECT count(*) AS "Всего"
 FROM "ToDoItem"
-WHERE "UserId" = '00000000-0000-0000-0000-000000000001'
-  AND "State" = 0;
+WHERE "UserId" = '00000000-0000-0000-0000-000000000001';
 
 -- ------------------------------------------------------------
 -- Поиск
@@ -95,44 +93,25 @@ WHERE EXISTS (
 ORDER BY "CreatedAt";
 
 -- ------------------------------------------------------------
--- ДЗ17: фоновые задачи и нотификации
+-- Пользователи (перебор в фоновых задачах)
 -- ------------------------------------------------------------
 
--- GetActiveWithDeadline(userId, from, to): активные рецепты пользователя,
--- у которых дедлайн попадает в интервал [from, to).
--- Пример для DeadlineBackgroundTask (дедлайны "вчера"):
---   from = '2026-10-26', to = '2026-10-27' (даты UTC).
-SELECT * FROM "ToDoItem"
-WHERE "UserId" = '00000000-0000-0000-0000-000000000002'
-  AND "State" = 0
-  AND "Deadline" IS NOT NULL
-  AND "Deadline" >= '2026-10-26'
-  AND "Deadline" < '2026-10-27'
-ORDER BY "CreatedAt";
-
--- Пример для TodayBackgroundTask (дедлайны "сегодня"):
---   from = '2026-10-27', to = '2026-10-28'.
-SELECT * FROM "ToDoItem"
-WHERE "State" = 0
-  AND "Deadline" IS NOT NULL
-  AND "Deadline" >= '2026-10-27'
-  AND "Deadline" < '2026-10-28'
-ORDER BY "CreatedAt";
-
--- GetAllUsersAsync(): все пользователи (для перебора в фоновых задачах)
+-- GetAllUsersAsync(): все пользователи
+-- (перебираются фоновыми задачами: рассылка, "Рецепт дня", чистка)
 SELECT * FROM "ToDoUser"
 ORDER BY "TelegramUserName";
 
 -- ------------------------------------------------------------
--- ДЗ17: NotificationService (нотификации)
+-- NotificationService (нотификации)
 -- ------------------------------------------------------------
 
 -- ScheduleNotification - проверка дубля (userId + type):
 -- EXISTS возвращает true, если нотификация такого типа уже есть
+-- (пример типа - "Рецепт дня" за 27.10.2026)
 SELECT EXISTS (
     SELECT 1 FROM "Notification"
     WHERE "UserId" = '00000000-0000-0000-0000-000000000001'
-      AND "Type" = 'Deadline_00000000-0000-0000-0002-000000000004'
+      AND "Type" = 'Daily_2026-10-27'
 ) AS "Дубль";
 
 -- GetScheduledNotification(scheduledBefore): неотправленные нотификации,
